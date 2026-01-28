@@ -9,14 +9,15 @@ Betroffene oder Betreuer finden schwer passende Übungen für spezifische Defizi
 ## 1.4. Aufgabenstellung
 Entwicklung eines "Mobility Games Recommender", der gezielt Übungen vorschlägt und verwaltet.
 ### 1.4.1. Funktionale Anforderungen
-- **Kategorien:** Einteilung in Bereiche wie Merkfähigkeit, Mobilität und spezielle Krankheitsbilder.
+- **Kategorien:** Einteilung in Bereiche wie Merkfähigkeit, Mobilität.
 - **Vorschlagswesen:** Der "Mobility Manager" empfiehlt passende Übungen.
 - **Historie:** Speicherung durchgeführter Übungen (Tracking).
 ### 1.4.2. Nichtfunktionale Anforderungen (NFA)
 - **Einfache Sprache:** Leicht verständlich für alle Nutzer.
 - **Benutzerfreundlichkeit:** Simples Design ("Keep it simple").
 ## 1.5. Ziele
-Nutzern helfen, schnell die richtigen Übungen zu finden, um ihre Fähigkeiten spielerisch zu fördern.
+1. Nutzern helfen, schnell die richtigen Übungen zu finden, um ihre Fähigkeiten spielerisch zu fördern.
+2. Soll besonders alte Menschen helfen Gesund zu bleiben
 ## 1.6. Mengengerüst
 ### Benutzer
 - **Übungsdatenbank:** ca. 20-30 Übungen (Text, Bilder, Links zu Videos)
