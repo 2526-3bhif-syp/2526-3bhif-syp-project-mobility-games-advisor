@@ -33,6 +33,8 @@ jobs:
         run: |
           sudo ${{ env.INPUTPATH }}/scripts/docker-convert.sh ${{ env.INPUTPATH }} ${{ env.SLIDES }}
           tree
+      - name: Disable Jekyll    
+        run: touch ${{ env.INPUTPATH }}/.nojekyll
 
 
       - name: Deploy to GitHub Pages
