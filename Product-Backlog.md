@@ -1,36 +1,49 @@
 # Product Backlog: Mobility-Games-Advisor
 
 ## Rollen
-- **Nutzer / Betroffene Person:** Personen mit körperlichen oder kognitiven Beeinträchtigungen (insbesondere ältere Personen).
 - **Betreuungsperson:** Pflegekräfte, Angehörige oder Therapeuten.
 
 ---
 
 ## Epic 1: Übungs- und Spieleverwaltung (Katalog)
-Als Nutzer möchte ich schnell und einfach geeignete Übungen finden und verstehen.
+Als Betreuer möchte ich schnell und einfach geeignete Übungen finden und verstehen.
 
-- **US 1.1: Übungsübersicht**  
-  *Als Nutzer* möchte ich eine strukturierte Übersicht aller verfügbaren Bewegungs- und Denkübungen sehen, *um* schnell eine passende Aktivität auszuwählen.
+- **US 1.1: Übungen ansehen und Videos abspielen**  
+  *Als Betreuer* möchte ich die hinterlegten Übungsbeschreibungen lesen und dazugehörige Videos direkt in der Anwendung abspielen sowie vor- und zurückspulen können, *um* die richtige Durchführung der Übung im eigenen Tempo genau nachvollziehen zu können.
 
-- **US 1.2: Kategorisierung & Filterung**  
-  *Als Nutzer* möchte ich die Übungen nach Kategorien (z. B. Merkfähigkeit, Mobilität) filtern können, *um* gezielt an meinen individuellen Schwächen arbeiten zu können.
+- **US 1.2: Übungsübersicht**  
+  *Als Betreuer* möchte ich eine strukturierte Übersicht aller verfügbaren Bewegungs- und Denkübungen sehen, *um* schnell eine passende Aktivität auszuwählen. 
+- **US 1.2.1: Anpinnen von Videos**  
+  *Als Betreuer* möchte ich videos oben anpinnen können die wichtig sind, um gleich drauf zugreifen zu können.
+  
+- **US 1.3: Kategorisierung & Filterung**  
+  *Als Betreuer* möchte ich die Übungen nach Kategorien (z. B. Merkfähigkeit, Mobilität) filtern können, *um* gezielt passende Übungen zu finden.
 
-- **US 1.3: Leicht verständliche Anleitungen**  
-  *Als Nutzer* möchte ich zu jeder Übung eine ausführliche und leicht verständliche Anleitung (mit Texten, Bildern und/oder Links zu Videos) erhalten, *um* sicherzustellen, dass ich die Übung korrekt ausführe.
+- **US 1.4: Kategorien erstellen & bearbeiten**  
+  *Als Betreuer* möchte ich neue Kategorien erstellen, bearbeiten und Übungen diesen Kategorien zuweisen können, *um* das System nach meinen Bedürfnissen zu strukturieren.
 
-- **US 1.4: Aufklärung über positiven Nutzen**  
-  *Als Nutzer* möchte ich bei jeder Übung nachlesen können, welche positiven Effekte (z.B. auf Gesundheit oder Mobilität) sie hat, *um* den Sinn der Übung zu verstehen und motiviert zu bleiben.
+- **US 1.5: Übungen & Videos hochladen**  
+  *Als Betreuer* möchte ich eigene Videos und Übungsbeschreibungen in das System hochladen können, *um* das Angebot für meine Betreuten zu individualisieren.
 
----
+- **US 1.6: Inhalte verwalten (Löschen)**  
+  *Als Betreuer* möchte ich nicht mehr benötigte Videos, Übungen oder Kategorien löschen können, *um* die Übersichtlichkeit beizubehalten.
 
-## Epic 2: Vorschläge ("Mobility Manager")
-Als Nutzer möchte ich gezielt bei der Auswahl unterstützt werden.
+- **US 1.7: Inhalte bearbeiten (Editieren)**  
+  *Als Betreuer* möchte ich den Titel, die Beschreibung und die Kategoriezuweisung einer bestehenden Übung nachträglich ändern können, *um* Fehler leicht zu korrigieren.
 
-- **US 2.1: Personalisierte Empfehlungen**  
-  *Als Nutzer (oder Betreuungsperson)* möchte ich meine individuellen Fähigkeiten, Einschränkungen und Ziele in der App hinterlegen können, *um* vom "Mobility Manager" passende Übungsvorschläge zu erhalten.
 
-- **US 2.2: Reduzierung der Suchzeit**  
-  *Als Betreuungsperson* möchte ich vom System sofort passende Übungen für unterschiedliche Beeinträchtigungen vorgeschlagen bekommen, *um* nicht mühsam auf verschiedenen Plattformen (z.B. YouTube, TikTok) danach suchen zu müssen.
+## Epic 2: Suche
+
+- **US 2.1: Freitext-Suche**  
+  *Als Betreuer* möchte ich über eine Suchleiste direkt nach dem Namen oder Stichwörtern einer Übung suchen können, *um* noch schneller zur gesuchten Aktivität zu gelangen.
+
+## Epic 3: Betreuungsplanung
+
+- **US 3.1: Sammelmappe / Tagesplan**  
+  *Als Betreuer* möchte ich mehrere Übungen temporär in einer Liste oder Tagesplanung zusammenfassen können, *um* sie nacheinander für meine aktuelle Betreuungseinheit abspielen zu können.
+
+
+
 
 
 
