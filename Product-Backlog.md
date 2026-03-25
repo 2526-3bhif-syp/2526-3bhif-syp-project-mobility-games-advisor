@@ -27,32 +27,11 @@ Als Nutzer möchte ich schnell und einfach geeignete Übungen finden und versteh
 Als Nutzer möchte ich gezielt bei der Auswahl unterstützt werden.
 
 - **US 2.1: Personalisierte Empfehlungen**  
-  *Als Nutzer (oder Betreuungsperson)* möchte ich meine individuellen Fähigkeiten, Einschränkungen und Ziele in der App hinterlegen können, *um* vom "Mobility Manager" maßgeschneiderte Übungsvorschläge zu erhalten.
+  *Als Nutzer (oder Betreuungsperson)* möchte ich meine individuellen Fähigkeiten, Einschränkungen und Ziele in der App hinterlegen können, *um* vom "Mobility Manager" passende Übungsvorschläge zu erhalten.
 
 - **US 2.2: Reduzierung der Suchzeit**  
   *Als Betreuungsperson* möchte ich vom System sofort passende Übungen für unterschiedliche Beeinträchtigungen vorgeschlagen bekommen, *um* nicht mühsam auf verschiedenen Plattformen (z.B. YouTube, TikTok) danach suchen zu müssen.
 
----
 
-## Epic 3: Historie und Fortschritts-Tracking
-Als Nutzer oder Betreuer möchte ich den Trainingsverlauf nachvollziehen können.
 
-- **US 3.1: Übungen absolvieren**  
-  *Als Nutzer* möchte ich eine durchgeführte Übung als "erledigt" markieren können, *um* sie in meiner Historie zu speichern.
 
-- **US 3.2: Eigener Fortschritt**  
-  *Als Nutzer* möchte ich meine Historie einsehen können, *um* meinen Fortschritt zu dokumentieren und meine Motivation für regelmäßiges Training aufrechtzuerhalten.
-
-- **US 3.3: Übersicht für Betreuer**  
-  *Als Betreuungsperson* möchte ich die Historie und Fortschritte der betreuten Person einsehen können, *um* die Entwicklung nachvollziehen und den Trainingsplan bei Bedarf anwenden/anpassen zu können.
-
----
-
-## Epic 4: Usability & Barrierefreiheit (Nichtfunktionale Anforderungen)
-Als Nutzer mit Einschränkungen brauche ich eine leicht bedienbare App.
-
-- **US 4.1: Barrierefreies Design**  
-  *Als älterer oder beeinträchtigter Nutzer* möchte ich eine Desktop-Anwendung mit einem sehr simplen und klaren Design ("Keep it simple") nutzen, *um* mich ohne technische Vorkenntnisse mühelos zurechtzufinden.
-
-- **US 4.2: Einfache Sprache**  
-  *Als Nutzer* möchte ich, dass alle Texte und Anweisungen in "Einfacher Sprache" formuliert sind, *um* die Inhalte und Aufgabenstellungen ohne Missverständnisse begreifen zu können.
