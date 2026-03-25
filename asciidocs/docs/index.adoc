@@ -38,7 +38,7 @@
 * Dashboard und Kategorien von Übungen wie zum Beispiel: Kognition und Gedächtnis oder Beweglichkeit
 
 === 1.4.2. Usecase-Diagramm
-image::../img/usecase-diagramm.png[usecase-diagramm]
+image::images/usecase-diagramm.png[usecase-diagramm]
 
 === 1.4.3. Nichtfunktionale Anforderungen (NFA)
 * *Einfache Sprache:* Leicht verständlich für alle Nutzer.

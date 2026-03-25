@@ -33,7 +33,7 @@ Mobility-Games-Advisor
 - Suche von Übungen
 - Dashboard und Kategorien von Übungen wie zum Beispiel: Kognition und Gedächtnis oder Beweglichkeit
 ### 1.4.2 Usecase-diagramm
-![usecase-diagramm](img/usecase-diagramm.png)
+![usecase-diagramm](asciidocs/docs/images/usecase-diagramm.png)
 ### 1.4.3. Nichtfunktionale Anforderungen (NFA)
 - **Einfache Sprache:** Leicht verständlich für alle Nutzer.
 - **Benutzerfreundlichkeit:** Simples Design ("Keep it simple").
