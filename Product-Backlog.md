@@ -13,22 +13,21 @@ Als Betreuer möchte ich schnell und einfach geeignete Übungen finden und verst
 
 - **US 1.2: Übungsübersicht**  
   *Als Betreuer* möchte ich eine strukturierte Übersicht aller verfügbaren Bewegungs- und Denkübungen sehen, *um* schnell eine passende Aktivität auszuwählen. 
-- **US 1.2.1: Anpinnen von Videos**  
-  *Als Betreuer* möchte ich videos oben anpinnen können die wichtig sind, um gleich drauf zugreifen zu können.
+
   
-- **US 1.3: Kategorisierung & Filterung**  
+- **US 1.2: Kategorisierung & Filterung**  
   *Als Betreuer* möchte ich die Übungen nach Kategorien (z. B. Merkfähigkeit, Mobilität) filtern können, *um* gezielt passende Übungen zu finden.
 
-- **US 1.4: Kategorien erstellen & bearbeiten**  
+- **US 1.3: Kategorien erstellen & bearbeiten**  
   *Als Betreuer* möchte ich neue Kategorien erstellen, bearbeiten und Übungen diesen Kategorien zuweisen können, *um* das System nach meinen Bedürfnissen zu strukturieren.
 
-- **US 1.5: Übungen & Videos hochladen**  
+- **US 1.4: Übungen & Videos hochladen**  
   *Als Betreuer* möchte ich eigene Videos und Übungsbeschreibungen in das System hochladen können, *um* das Angebot für meine Betreuten zu individualisieren.
 
-- **US 1.6: Inhalte verwalten (Löschen)**  
+- **US 1.5: Inhalte verwalten (Löschen)**  
   *Als Betreuer* möchte ich nicht mehr benötigte Videos, Übungen oder Kategorien löschen können, *um* die Übersichtlichkeit beizubehalten.
 
-- **US 1.7: Inhalte bearbeiten (Editieren)**  
+- **US 1.6: Inhalte bearbeiten (Editieren)**  
   *Als Betreuer* möchte ich den Titel, die Beschreibung und die Kategoriezuweisung einer bestehenden Übung nachträglich ändern können, *um* Fehler leicht zu korrigieren.
 
 
