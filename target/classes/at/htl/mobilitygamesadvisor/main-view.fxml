@@ -5,7 +5,7 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.Font?>
 
-<HBox prefHeight="700.0" prefWidth="1000.0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+<HBox prefHeight="750.0" prefWidth="1100.0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="at.htl.mobilitygamesadvisor.Controller" stylesheets="@style.css" styleClass="main-container">
 
     <!-- Sidebar -->
@@ -23,52 +23,82 @@
 
         <Region prefHeight="40" />
 
-        <Button text="Dashboard" maxWidth="Infinity" styleClass="nav-button" />
-        <Button text="Übungen" maxWidth="Infinity" styleClass="nav-button, active-nav" />
-        <Button text="Kategorien" maxWidth="Infinity" styleClass="nav-button" />
-        <Button text="Tracking / Fortschritt" maxWidth="Infinity" styleClass="nav-button" />
-        <Button text="Sammelmappe" maxWidth="Infinity" styleClass="nav-button" />
+        <Button fx:id="btnDashboard" text="Dashboard" maxWidth="Infinity" styleClass="nav-button" onAction="#showDashboard" />
+        <Button fx:id="btnExercises" text="Übungen" maxWidth="Infinity" styleClass="nav-button" onAction="#showExercises" />
+        <Button fx:id="btnCategories" text="Kategorien" maxWidth="Infinity" styleClass="nav-button" onAction="#showCategories" />
+        <Button fx:id="btnTracking" text="Tracking / Fortschritt" maxWidth="Infinity" styleClass="nav-button" onAction="#showTracking" />
+        <Button fx:id="btnCollection" text="Sammelmappe" maxWidth="Infinity" styleClass="nav-button" onAction="#showCollection" />
 
         <Region VBox.vgrow="ALWAYS" />
 
         <Button text="Einstellungen" maxWidth="Infinity" styleClass="nav-button-secondary" />
     </VBox>
 
-    <!-- Main Content Area -->
-    <VBox HBox.hgrow="ALWAYS" spacing="20" styleClass="content-area">
-        <padding>
-            <Insets top="30" right="40" bottom="30" left="40"/>
-        </padding>
+    <!-- Content Area with StackPane for Navigation -->
+    <StackPane HBox.hgrow="ALWAYS" styleClass="content-area">
+        
+        <!-- PAGE: Dashboard -->
+        <VBox fx:id="paneDashboard" spacing="20" visible="true">
+            <padding><Insets top="30" right="40" bottom="30" left="40"/></padding>
+            <Label text="Dashboard" styleClass="header-text" />
+            <Label text="Willkommen im Mobility Games Advisor!" styleClass="header-subtitle" />
+            <Separator />
+            <Label text="Hier kommt die Übersicht deiner wichtigsten Kennzahlen hin." />
+            <HBox spacing="20">
+                <VBox styleClass="category-card" prefWidth="200" prefHeight="150">
+                    <Label text="Aktive Übungen" styleClass="card-title" />
+                    <Label text="24" styleClass="header-text" />
+                </VBox>
+                <VBox styleClass="category-card" prefWidth="200" prefHeight="150">
+                    <Label text="Heutige Einheiten" styleClass="card-title" />
+                    <Label text="5" styleClass="header-text" />
+                </VBox>
+            </HBox>
+        </VBox>
 
-        <!-- Header -->
-        <HBox alignment="CENTER_LEFT" spacing="20">
-            <VBox>
-                <Label text="Übungsübersicht" styleClass="header-text" />
-                <Label text="Entdecke und verwalte Übungen für deine Schützlinge" styleClass="header-subtitle" />
-            </VBox>
-            <Region HBox.hgrow="ALWAYS" />
-            <TextField promptText="Übung suchen..." styleClass="search-field" prefWidth="250" />
-            <Button text="+ Neue Übung" styleClass="action-button" />
-        </HBox>
+        <!-- PAGE: Exercises -->
+        <VBox fx:id="paneExercises" spacing="20" visible="false">
+            <padding><Insets top="30" right="40" bottom="30" left="40"/></padding>
+            <HBox alignment="CENTER_LEFT" spacing="20">
+                <VBox>
+                    <Label text="Übungsübersicht" styleClass="header-text" />
+                    <Label text="Entdecke und verwalte Übungen" styleClass="header-subtitle" />
+                </VBox>
+                <Region HBox.hgrow="ALWAYS" />
+                <TextField promptText="Übung suchen..." styleClass="search-field" prefWidth="250" />
+                <Button text="+ Neue Übung" styleClass="action-button" />
+            </HBox>
+            <Separator />
+            <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS" styleClass="transparent-scroll">
+                <FlowPane fx:id="exerciseGrid" hgap="25" vgap="25" prefWrapLength="700" />
+            </ScrollPane>
+        </VBox>
 
-        <Separator />
+        <!-- PAGE: Kategorien -->
+        <VBox fx:id="paneCategories" spacing="20" visible="false">
+            <padding><Insets top="30" right="40" bottom="30" left="40"/></padding>
+            <Label text="Kategorien verwalten" styleClass="header-text" />
+            <Separator />
+            <Label text="Hier kannst du neue Kategorien wie 'Kognition' oder 'Mobilität' erstellen." />
+        </VBox>
 
-        <!-- Filter Bar -->
-        <HBox spacing="15" alignment="CENTER_LEFT">
-            <Label text="Filtern nach:" styleClass="filter-label" />
-            <ComboBox promptText="Kategorie" styleClass="filter-combo" prefWidth="150" />
-            <ComboBox promptText="Schwierigkeit" styleClass="filter-combo" prefWidth="150" />
-            <Region HBox.hgrow="ALWAYS" />
-            <Label text="Sortieren:" styleClass="filter-label" />
-            <ChoiceBox styleClass="filter-combo" prefWidth="120" />
-        </HBox>
+        <!-- PAGE: Tracking -->
+        <VBox fx:id="paneTracking" spacing="20" visible="false">
+            <padding><Insets top="30" right="40" bottom="30" left="40"/></padding>
+            <Label text="Fortschritt &amp; Tracking" styleClass="header-text" />
+            <Separator />
+            <Label text="Statistiken über absolvierte Übungen." />
+        </VBox>
 
-        <!-- Exercise Grid -->
-        <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS" styleClass="transparent-scroll">
-            <FlowPane fx:id="exerciseGrid" hgap="25" vgap="25" prefWrapLength="700">
-                <!-- Hier werden die Übungs-Karten vom Controller eingefügt -->
-            </FlowPane>
-        </ScrollPane>
+        <!-- PAGE: Sammelmappe (Issue #21) -->
+        <VBox fx:id="paneCollection" spacing="20" visible="false">
+            <padding><Insets top="30" right="40" bottom="30" left="40"/></padding>
+            <Label text="Sammelmappe / Tagesplan" styleClass="header-text" />
+            <Label text="Stelle Übungen für die heutige Sitzung zusammen" styleClass="header-subtitle" />
+            <Separator />
+            <Label text="Dein aktueller Tagesplan ist noch leer." />
+            <Button text="Übungen hinzufügen" styleClass="action-button" onAction="#showExercises" />
+        </VBox>
 
-    </VBox>
+    </StackPane>
 </HBox>
