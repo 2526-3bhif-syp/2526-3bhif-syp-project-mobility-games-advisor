@@ -65,8 +65,7 @@
                     <Label text="Entdecke und verwalte Übungen" styleClass="header-subtitle" />
                 </VBox>
                 <Region HBox.hgrow="ALWAYS" />
-                <TextField promptText="Übung suchen..." styleClass="search-field" prefWidth="250" />
-                <Button text="+ Neue Übung" styleClass="action-button" />
+                <TextField fx:id="searchField" promptText="Übung suchen..." styleClass="search-field" prefWidth="250" />                <Button text="+ Neue Übung" styleClass="action-button" />
             </HBox>
             <Separator />
             <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS" styleClass="transparent-scroll">
