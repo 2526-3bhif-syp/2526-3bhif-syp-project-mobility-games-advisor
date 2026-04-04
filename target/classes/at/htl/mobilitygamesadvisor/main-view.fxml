@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
+
+<HBox prefHeight="700.0" prefWidth="1000.0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="at.htl.mobilitygamesadvisor.Controller" stylesheets="@style.css" styleClass="main-container">
+
+    <!-- Sidebar -->
+    <VBox spacing="10" styleClass="sidebar" prefWidth="250">
+        <padding>
+            <Insets top="30" right="20" bottom="30" left="20"/>
+        </padding>
+
+        <Label text="Mobility Games" styleClass="sidebar-title">
+            <font>
+                <Font name="System Bold" size="20.0" />
+            </font>
+        </Label>
+        <Label text="Advisor" styleClass="sidebar-subtitle" />
+
+        <Region prefHeight="40" />
+
+        <Button text="Dashboard" maxWidth="Infinity" styleClass="nav-button" />
+        <Button text="Übungen" maxWidth="Infinity" styleClass="nav-button, active-nav" />
+        <Button text="Kategorien" maxWidth="Infinity" styleClass="nav-button" />
+        <Button text="Tracking / Fortschritt" maxWidth="Infinity" styleClass="nav-button" />
+        <Button text="Sammelmappe" maxWidth="Infinity" styleClass="nav-button" />
+
+        <Region VBox.vgrow="ALWAYS" />
+
+        <Button text="Einstellungen" maxWidth="Infinity" styleClass="nav-button-secondary" />
+    </VBox>
+
+    <!-- Main Content Area -->
+    <VBox HBox.hgrow="ALWAYS" spacing="20" styleClass="content-area">
+        <padding>
+            <Insets top="30" right="40" bottom="30" left="40"/>
+        </padding>
+
+        <!-- Header -->
+        <HBox alignment="CENTER_LEFT" spacing="20">
+            <VBox>
+                <Label text="Übungsübersicht" styleClass="header-text" />
+                <Label text="Entdecke und verwalte Übungen für deine Schützlinge" styleClass="header-subtitle" />
+            </VBox>
+            <Region HBox.hgrow="ALWAYS" />
+            <TextField promptText="Übung suchen..." styleClass="search-field" prefWidth="250" />
+            <Button text="+ Neue Übung" styleClass="action-button" />
+        </HBox>
+
+        <Separator />
+
+        <!-- Filter Bar -->
+        <HBox spacing="15" alignment="CENTER_LEFT">
+            <Label text="Filtern nach:" styleClass="filter-label" />
+            <ComboBox promptText="Kategorie" styleClass="filter-combo" prefWidth="150" />
+            <ComboBox promptText="Schwierigkeit" styleClass="filter-combo" prefWidth="150" />
+            <Region HBox.hgrow="ALWAYS" />
+            <Label text="Sortieren:" styleClass="filter-label" />
+            <ChoiceBox styleClass="filter-combo" prefWidth="120" />
+        </HBox>
+
+        <!-- Exercise Grid -->
+        <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS" styleClass="transparent-scroll">
+            <FlowPane fx:id="exerciseGrid" hgap="25" vgap="25" prefWrapLength="700">
+                <!-- Hier werden die Übungs-Karten vom Controller eingefügt -->
+            </FlowPane>
+        </ScrollPane>
+
+    </VBox>
+</HBox>

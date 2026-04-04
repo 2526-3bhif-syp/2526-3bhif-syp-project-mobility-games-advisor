@@ -1,0 +1,159 @@
+/* Modern Dashboard Styling */
+
+.main-container {
+    -fx-background-color: #f4f7f6;
+}
+
+/* Sidebar */
+.sidebar {
+    -fx-background-color: #2c3e50;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 0);
+}
+
+.sidebar-title {
+    -fx-text-fill: white;
+    -fx-font-size: 22px;
+}
+
+.sidebar-subtitle {
+    -fx-text-fill: #bdc3c7;
+    -fx-font-size: 14px;
+    -fx-padding: -5 0 0 0;
+}
+
+.nav-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #ecf0f1;
+    -fx-alignment: CENTER_LEFT;
+    -fx-padding: 12 15 12 15;
+    -fx-font-size: 14px;
+    -fx-cursor: hand;
+    -fx-background-radius: 5;
+}
+
+.nav-button:hover {
+    -fx-background-color: #34495e;
+}
+
+.active-nav {
+    -fx-background-color: #3498db;
+    -fx-font-weight: bold;
+}
+
+.nav-button-secondary {
+    -fx-background-color: transparent;
+    -fx-text-fill: #95a5a6;
+    -fx-alignment: CENTER_LEFT;
+    -fx-padding: 10 15 10 15;
+}
+
+/* Content Area */
+.content-area {
+    -fx-background-color: #ffffff;
+}
+
+.header-text {
+    -fx-font-size: 28px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #2c3e50;
+}
+
+.header-subtitle {
+    -fx-font-size: 14px;
+    -fx-text-fill: #7f8c8d;
+}
+
+.search-field {
+    -fx-background-radius: 20;
+    -fx-padding: 8 15 8 15;
+    -fx-background-color: #ecf0f1;
+    -fx-border-color: transparent;
+}
+
+.action-button {
+    -fx-background-color: #27ae60;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-padding: 10 20 10 20;
+    -fx-background-radius: 20;
+    -fx-cursor: hand;
+}
+
+.action-button:hover {
+    -fx-background-color: #2ecc71;
+}
+
+/* Filter Bar */
+.filter-label {
+    -fx-font-weight: bold;
+    -fx-text-fill: #7f8c8d;
+}
+
+.filter-combo {
+    -fx-background-color: #f8f9fa;
+    -fx-border-color: #dee2e6;
+    -fx-border-radius: 5;
+}
+
+/* Exercise Cards */
+.exercise-card {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 12;
+    -fx-padding: 0;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.08), 8, 0, 0, 2);
+    -fx-cursor: hand;
+    -fx-pref-width: 220;
+}
+
+.exercise-card:hover {
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.15), 12, 0, 0, 4);
+    -fx-translate-y: -4;
+}
+
+.card-image-placeholder {
+    -fx-background-color: #3498db;
+    -fx-min-height: 120;
+    -fx-background-radius: 12 12 0 0;
+    -fx-alignment: CENTER;
+}
+
+.card-image-text {
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+}
+
+.card-content {
+    -fx-padding: 15;
+}
+
+.card-title {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #2c3e50;
+}
+
+.card-description {
+    -fx-text-fill: #7f8c8d;
+    -fx-font-size: 12px;
+    -fx-wrap-text: true;
+}
+
+.card-tag {
+    -fx-background-color: #e1f5fe;
+    -fx-text-fill: #01579b;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-padding: 3 8 3 8;
+    -fx-background-radius: 10;
+}
+
+/* ScrollPane */
+.transparent-scroll {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 10 0 0 0;
+}
+
+.transparent-scroll .viewport {
+    -fx-background-color: transparent;
+}
