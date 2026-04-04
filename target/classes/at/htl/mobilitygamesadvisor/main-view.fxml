@@ -6,7 +6,7 @@
 <?import javafx.scene.text.Font?>
 
 <HBox prefHeight="750.0" prefWidth="1100.0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="at.htl.mobilitygamesadvisor.Controller" stylesheets="@style.css" styleClass="main-container">
+      fx:controller="at.htl.mobilitygamesadvisor.view.Controller" stylesheets="@style.css" styleClass="main-container">
 
     <!-- Sidebar -->
     <VBox spacing="10" styleClass="sidebar" prefWidth="250">
