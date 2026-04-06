@@ -2,7 +2,8 @@ module at.htl.mobilitygamesadvisor {
     requires javafx.controls;
     requires javafx.fxml;
     requires javafx.media;
-    requires java.sql;          // ← add this
+    requires java.sql;
+    requires org.postgresql.jdbc;
 
     opens at.htl.mobilitygamesadvisor to javafx.fxml;
     opens at.htl.mobilitygamesadvisor.view to javafx.fxml;

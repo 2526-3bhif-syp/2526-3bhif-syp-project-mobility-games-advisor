@@ -3,6 +3,7 @@ package at.htl.mobilitygamesadvisor.view;
 import at.htl.mobilitygamesadvisor.model.ExerciseRepository;
 import at.htl.mobilitygamesadvisor.presenter.ExercisePresenter;
 import javafx.fxml.FXML;
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
@@ -13,6 +14,7 @@ import javafx.scene.layout.VBox;
 import java.util.List;
 import java.util.function.Consumer;
 import at.htl.mobilitygamesadvisor.model.Exercise;
+import javafx.stage.Stage;
 
 
 /**
@@ -46,7 +48,7 @@ public class Controller implements ExerciseView {
     public void showExercises(List<Exercise> exercises) {
         if (exerciseGrid == null) return;
         exerciseGrid.getChildren().clear();
-        exercises.forEach(e -> addExerciseCard(e.title(), e.desc(), e.category()));
+        exercises.forEach(this::addExerciseCard);
     }
 
     @Override
@@ -81,28 +83,41 @@ public class Controller implements ExerciseView {
 
     // ── Card rendering ────────────────────────────────────────────────────────
 
-    private void addExerciseCard(String title, String desc, String category) {
+    private void addExerciseCard(Exercise e) {
         VBox card = new VBox();
         card.getStyleClass().add("exercise-card");
 
-        StackPane imagePlaceholder = new StackPane(new Label("VIDEO"));
+        StackPane imagePlaceholder = new StackPane(new Label("▶ VIDEO"));
         imagePlaceholder.getStyleClass().add("card-image-placeholder");
+
+        // Klick auf die Karte → Video öffnen
+        imagePlaceholder.setOnMouseClicked(event -> openVideo(e.videoUrl()));
 
         VBox content = new VBox(8);
         content.getStyleClass().add("card-content");
 
-        Label titleLabel = new Label(title);
+        Label titleLabel = new Label(e.title());
         titleLabel.getStyleClass().add("card-title");
 
-        Label descLabel = new Label(desc);
+        Label descLabel = new Label(e.desc());
         descLabel.getStyleClass().add("card-description");
         descLabel.setWrapText(true);
 
-        Label tagLabel = new Label(category);
+        Label tagLabel = new Label(e.category());
         tagLabel.getStyleClass().add("card-tag");
 
         content.getChildren().addAll(titleLabel, descLabel, tagLabel);
         card.getChildren().addAll(imagePlaceholder, content);
         exerciseGrid.getChildren().add(card);
+    }
+
+    private void openVideo(String videoUrl) {
+        VideoPlayerView player = new VideoPlayerView(videoUrl);
+
+        Stage videoStage = new Stage();
+        videoStage.setTitle("Video");
+        videoStage.setScene(new Scene(player, 660, 400));
+        videoStage.setOnCloseRequest(e -> player.dispose()); // Ressourcen freigeben
+        videoStage.show();
     }
 }
