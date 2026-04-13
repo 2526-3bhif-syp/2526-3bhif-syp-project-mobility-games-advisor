@@ -23,7 +23,6 @@
 
         <Region prefHeight="40" />
 
-        <Button fx:id="btnDashboard" text="Dashboard" maxWidth="Infinity" styleClass="nav-button" onAction="#showDashboard" />
         <Button fx:id="btnExercises" text="Übungen" maxWidth="Infinity" styleClass="nav-button" onAction="#showExercises" />
         <Button fx:id="btnCategories" text="Kategorien" maxWidth="Infinity" styleClass="nav-button" onAction="#showCategories" />
         <Button fx:id="btnTracking" text="Tracking / Fortschritt" maxWidth="Infinity" styleClass="nav-button" onAction="#showTracking" />
@@ -36,25 +35,6 @@
 
     <!-- Content Area with StackPane for Navigation -->
     <StackPane HBox.hgrow="ALWAYS" styleClass="content-area">
-        
-        <!-- PAGE: Dashboard -->
-        <VBox fx:id="paneDashboard" spacing="20" visible="true">
-            <padding><Insets top="30" right="40" bottom="30" left="40"/></padding>
-            <Label text="Dashboard" styleClass="header-text" />
-            <Label text="Willkommen im Mobility Games Advisor!" styleClass="header-subtitle" />
-            <Separator />
-            <Label text="Hier kommt die Übersicht deiner wichtigsten Kennzahlen hin." />
-            <HBox spacing="20">
-                <VBox styleClass="category-card" prefWidth="200" prefHeight="150">
-                    <Label text="Aktive Übungen" styleClass="card-title" />
-                    <Label text="24" styleClass="header-text" />
-                </VBox>
-                <VBox styleClass="category-card" prefWidth="200" prefHeight="150">
-                    <Label text="Heutige Einheiten" styleClass="card-title" />
-                    <Label text="5" styleClass="header-text" />
-                </VBox>
-            </HBox>
-        </VBox>
 
         <!-- PAGE: Exercises -->
         <VBox fx:id="paneExercises" spacing="20" visible="false">

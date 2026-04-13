@@ -14,9 +14,9 @@ public class ExerciseRepository {
         if (query == null || query.isBlank()) return getAll();
 
         String sql = """
-            SELECT title, description, category FROM exercises
-            WHERE LOWER(title) LIKE ? OR LOWER(category) LIKE ?
-            """;
+        SELECT title, description, category, video_url FROM exercises
+        WHERE LOWER(title) LIKE ? OR LOWER(category) LIKE ?
+        """;
         String pattern = "%" + query.toLowerCase() + "%";
 
         try (PreparedStatement stmt = DatabaseConnection.get().prepareStatement(sql)) {

@@ -14,7 +14,11 @@ import javafx.scene.layout.VBox;
 import java.util.List;
 import java.util.function.Consumer;
 import at.htl.mobilitygamesadvisor.model.Exercise;
+import javafx.scene.media.Media;
+import javafx.scene.media.MediaPlayer;
+import javafx.scene.media.MediaView;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 
 
 /**
@@ -27,9 +31,9 @@ public class Controller implements ExerciseView {
     @FXML private FlowPane  exerciseGrid;
     @FXML private TextField searchField;
 
-    @FXML private VBox   paneDashboard, paneExercises, paneCategories,
+    @FXML private VBox   paneExercises, paneCategories,
             paneTracking,  paneCollection;
-    @FXML private Button btnDashboard,  btnExercises,  btnCategories,
+    @FXML private Button  btnExercises,  btnCategories,
             btnTracking,   btnCollection;
 
     // ── MVP wiring ───────────────────────────────────────────────────────────
@@ -39,7 +43,7 @@ public class Controller implements ExerciseView {
         // Construct model and presenter; presenter wires itself to this view
         new ExercisePresenter(new ExerciseRepository(), this);
 
-        showDashboard();
+        showExercises();
     }
 
     // ── ExerciseView implementation ──────────────────────────────────────────
@@ -61,14 +65,13 @@ public class Controller implements ExerciseView {
 
     // ── Navigation (pure view concern) ───────────────────────────────────────
 
-    @FXML private void showDashboard()  { switchPage(paneDashboard,  btnDashboard);  }
     @FXML private void showExercises()  { switchPage(paneExercises,  btnExercises);  }
     @FXML private void showCategories() { switchPage(paneCategories, btnCategories); }
     @FXML private void showTracking()   { switchPage(paneTracking,   btnTracking);   }
     @FXML private void showCollection() { switchPage(paneCollection, btnCollection); }
 
     private void switchPage(VBox activePane, Button activeButton) {
-        List.of(paneDashboard, paneExercises, paneCategories, paneTracking, paneCollection)
+        List.of(paneExercises, paneCategories, paneTracking, paneCollection)
                 .forEach(p -> p.setVisible(false));
         activePane.setVisible(true);
 
@@ -77,7 +80,7 @@ public class Controller implements ExerciseView {
     }
 
     private void resetButtonStyles() {
-        List.of(btnDashboard, btnExercises, btnCategories, btnTracking, btnCollection)
+        List.of(btnExercises, btnCategories, btnTracking, btnCollection)
                 .forEach(b -> b.getStyleClass().remove("active-nav"));
     }
 
@@ -87,8 +90,43 @@ public class Controller implements ExerciseView {
         VBox card = new VBox();
         card.getStyleClass().add("exercise-card");
 
-        StackPane imagePlaceholder = new StackPane(new Label("▶ VIDEO"));
+        // Thumbnail statt "▶ VIDEO" Text
+        StackPane imagePlaceholder = new StackPane();
         imagePlaceholder.getStyleClass().add("card-image-placeholder");
+        imagePlaceholder.setPrefHeight(120);
+
+        if (e.videoUrl() != null && !e.videoUrl().isBlank()) {
+            try {
+                Media media = new Media(e.videoUrl());
+                MediaPlayer player = new MediaPlayer(media);
+
+                // Erstes Frame laden und dann sofort pausieren
+                player.setAutoPlay(false);
+                player.seek(Duration.ZERO);
+                player.pause();
+
+                MediaView thumbnail = new MediaView(player);
+                thumbnail.setFitWidth(220);
+                thumbnail.setFitHeight(120);
+                thumbnail.setPreserveRatio(false);
+
+                // Play-Icon Overlay
+                Label playIcon = new Label("▶");
+                playIcon.setStyle(
+                        "-fx-text-fill: white;" +
+                                "-fx-font-size: 28px;" +
+                                "-fx-effect: dropshadow(gaussian, black, 8, 0, 0, 0);"
+                );
+
+                imagePlaceholder.getChildren().addAll(thumbnail, playIcon);
+            } catch (Exception ex) {
+                imagePlaceholder.getChildren().add(new Label("▶ VIDEO"));
+            }
+        } else {
+            imagePlaceholder.getChildren().add(new Label("▶ VIDEO"));
+        }
+
+        imagePlaceholder.setOnMouseClicked(event -> openVideo(e.videoUrl()));
 
         // Klick auf die Karte → Video öffnen
         imagePlaceholder.setOnMouseClicked(event -> openVideo(e.videoUrl()));
