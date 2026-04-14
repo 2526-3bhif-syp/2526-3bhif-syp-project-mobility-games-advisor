@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
+
+<HBox prefHeight="750.0" prefWidth="1100.0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="at.htl.mobilitygamesadvisor.view.Controller" stylesheets="@style.css" styleClass="main-container">
+
+    <!-- Sidebar -->
+    <VBox spacing="10" styleClass="sidebar" prefWidth="250">
+        <padding>
+            <Insets top="30" right="20" bottom="30" left="20"/>
+        </padding>
+
+        <Label text="Mobility Games" styleClass="sidebar-title">
+            <font>
+                <Font name="System Bold" size="20.0" />
+            </font>
+        </Label>
+        <Label text="Advisor" styleClass="sidebar-subtitle" />
+
+        <Region prefHeight="40" />
+
+        <Button fx:id="btnExercises" text="Übungen" maxWidth="Infinity" styleClass="nav-button" onAction="#showExercises" />
+        <Button fx:id="btnCategories" text="Kategorien" maxWidth="Infinity" styleClass="nav-button" onAction="#showCategories" />
+        <Button fx:id="btnTracking" text="Tracking / Fortschritt" maxWidth="Infinity" styleClass="nav-button" onAction="#showTracking" />
+        <Button fx:id="btnCollection" text="Sammelmappe" maxWidth="Infinity" styleClass="nav-button" onAction="#showCollection" />
+
+        <Region VBox.vgrow="ALWAYS" />
+
+        <Button text="Einstellungen" maxWidth="Infinity" styleClass="nav-button-secondary" />
+    </VBox>
+
+    <!-- Content Area with StackPane for Navigation -->
+    <StackPane HBox.hgrow="ALWAYS" styleClass="content-area">
+        
+        <!-- PAGE: Exercises -->
+        <VBox fx:id="paneExercises" spacing="20" visible="false">
+            <padding><Insets top="30" right="40" bottom="30" left="40"/></padding>
+            <HBox alignment="CENTER_LEFT" spacing="20">
+                <VBox>
+                    <Label text="Übungsübersicht" styleClass="header-text" />
+                    <Label text="Entdecke und verwalte Übungen" styleClass="header-subtitle" />
+                </VBox>
+                <Region HBox.hgrow="ALWAYS" />
+                <TextField fx:id="searchField" promptText="Übung suchen..." styleClass="search-field" prefWidth="250" />                <Button text="+ Neue Übung" styleClass="action-button" />
+            </HBox>
+            <Separator />
+            <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS" styleClass="transparent-scroll">
+                <FlowPane fx:id="exerciseGrid" hgap="25" vgap="25" prefWrapLength="700" />
+            </ScrollPane>
+        </VBox>
+
+        <!-- PAGE: Kategorien -->
+        <VBox fx:id="paneCategories" spacing="20" visible="false">
+            <padding><Insets top="30" right="40" bottom="30" left="40"/></padding>
+            <Label text="Kategorien verwalten" styleClass="header-text" />
+            <Separator />
+            <Label text="Hier kannst du neue Kategorien wie 'Kognition' oder 'Mobilität' erstellen." />
+        </VBox>
+
+        <!-- PAGE: Tracking -->
+        <VBox fx:id="paneTracking" spacing="20" visible="false">
+            <padding><Insets top="30" right="40" bottom="30" left="40"/></padding>
+            <Label text="Fortschritt &amp; Tracking" styleClass="header-text" />
+            <Separator />
+            <Label text="Statistiken über absolvierte Übungen." />
+        </VBox>
+
+        <!-- PAGE: Sammelmappe (Issue #21) -->
+        <VBox fx:id="paneCollection" spacing="20" visible="false">
+            <padding><Insets top="30" right="40" bottom="30" left="40"/></padding>
+            <Label text="Sammelmappe / Tagesplan" styleClass="header-text" />
+            <Label text="Stelle Übungen für die heutige Sitzung zusammen" styleClass="header-subtitle" />
+            <Separator />
+            <Label text="Dein aktueller Tagesplan ist noch leer." />
+            <Button text="Übungen hinzufügen" styleClass="action-button" onAction="#showExercises" />
+        </VBox>
+
+    </StackPane>
+</HBox>
