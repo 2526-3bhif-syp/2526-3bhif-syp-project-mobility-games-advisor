@@ -249,3 +249,110 @@
     -fx-font-family: "Segoe UI", "Helvetica Neue", sans-serif;
     -fx-font-size: 13px;
 }
+
+/* ── Detail Dialog ────────────────────────────────── */
+.detail-dialog {
+    -fx-background-color: #0f1117;
+}
+
+.detail-title {
+    -fx-text-fill: #f0f0f0;
+    -fx-font-family: "Segoe UI Semibold", "Helvetica Neue", sans-serif;
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+}
+
+.detail-section-title {
+    -fx-text-fill: #f5a623;
+    -fx-font-family: "Segoe UI Semibold", "Helvetica Neue", sans-serif;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-padding: 4 0 2 0;
+}
+
+.detail-description {
+    -fx-text-fill: #c0c5d4;
+    -fx-font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+    -fx-font-size: 13.5px;
+    -fx-wrap-text: true;
+    -fx-background-color: #16181f;
+    -fx-background-radius: 10;
+    -fx-padding: 14 16 14 16;
+    -fx-border-color: #ffffff0c;
+    -fx-border-radius: 10;
+    -fx-border-width: 1;
+}
+
+/* ── Video Controls ───────────────────────────────── */
+.video-controls {
+    -fx-background-color: #16181f;
+    -fx-background-radius: 10;
+    -fx-padding: 10 16 10 16;
+    -fx-border-color: #ffffff0c;
+    -fx-border-radius: 10;
+    -fx-border-width: 1;
+}
+
+.video-ctrl-btn {
+    -fx-background-color: #1e2029;
+    -fx-text-fill: #c0c5d4;
+    -fx-font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+    -fx-font-size: 13px;
+    -fx-padding: 8 18 8 18;
+    -fx-background-radius: 8;
+    -fx-cursor: hand;
+    -fx-border-color: #ffffff12;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+}
+
+.video-ctrl-btn:hover {
+    -fx-background-color: #2a2d3a;
+    -fx-text-fill: #f0f0f0;
+}
+
+.video-ctrl-btn-primary {
+    -fx-background-color: #f5a623;
+    -fx-text-fill: #0f1117;
+    -fx-font-family: "Segoe UI Semibold", "Helvetica Neue", sans-serif;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-padding: 8 28 8 28;
+    -fx-background-radius: 8;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, #f5a62355, 10, 0, 0, 2);
+}
+
+.video-ctrl-btn-primary:hover {
+    -fx-background-color: #fbb93a;
+    -fx-effect: dropshadow(gaussian, #f5a62380, 14, 0, 0, 4);
+}
+
+.video-ctrl-btn-primary:pressed {
+    -fx-background-color: #e09618;
+}
+
+.video-time-label {
+    -fx-text-fill: #555a66;
+    -fx-font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+    -fx-font-size: 12px;
+    -fx-padding: 2 0 0 0;
+}
+
+.video-slider .track {
+    -fx-background-color: #2a2d3a;
+    -fx-background-radius: 4;
+    -fx-pref-height: 4;
+}
+
+.video-slider .thumb {
+    -fx-background-color: #f5a623;
+    -fx-pref-width: 14;
+    -fx-pref-height: 14;
+    -fx-background-radius: 7;
+    -fx-effect: dropshadow(gaussian, #f5a62355, 6, 0, 0, 0);
+}
+
+.video-slider:hover .thumb {
+    -fx-background-color: #fbb93a;
+}

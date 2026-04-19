@@ -3,22 +3,31 @@ package at.htl.mobilitygamesadvisor.view;
 import at.htl.mobilitygamesadvisor.model.ExerciseRepository;
 import at.htl.mobilitygamesadvisor.presenter.ExercisePresenter;
 import javafx.fxml.FXML;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.Separator;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.stage.Screen;
+import javafx.stage.Stage;
+import javafx.util.Duration;
 
 import java.util.List;
 import java.util.function.Consumer;
+
 import at.htl.mobilitygamesadvisor.model.Exercise;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 import javafx.scene.media.MediaView;
-import javafx.stage.Stage;
-import javafx.util.Duration;
 
 
 /**
@@ -40,9 +49,7 @@ public class Controller implements ExerciseView {
 
     @FXML
     public void initialize() {
-        // Construct model and presenter; presenter wires itself to this view
         new ExercisePresenter(new ExerciseRepository(), this);
-
         showExercises();
     }
 
@@ -74,7 +81,6 @@ public class Controller implements ExerciseView {
         List.of(paneExercises, paneCategories, paneTracking, paneCollection)
                 .forEach(p -> p.setVisible(false));
         activePane.setVisible(true);
-
         resetButtonStyles();
         activeButton.getStyleClass().add("active-nav");
     }
@@ -89,8 +95,9 @@ public class Controller implements ExerciseView {
     private void addExerciseCard(Exercise e) {
         VBox card = new VBox();
         card.getStyleClass().add("exercise-card");
+        card.setStyle("-fx-cursor: hand;");
 
-        // Thumbnail statt "▶ VIDEO" Text
+        // ── Video Thumbnail ──────────────────────────────────────────────────
         StackPane imagePlaceholder = new StackPane();
         imagePlaceholder.getStyleClass().add("card-image-placeholder");
         imagePlaceholder.setPrefHeight(120);
@@ -99,8 +106,6 @@ public class Controller implements ExerciseView {
             try {
                 Media media = new Media(e.videoUrl());
                 MediaPlayer player = new MediaPlayer(media);
-
-                // Erstes Frame laden und dann sofort pausieren
                 player.setAutoPlay(false);
                 player.seek(Duration.ZERO);
                 player.pause();
@@ -110,14 +115,12 @@ public class Controller implements ExerciseView {
                 thumbnail.setFitHeight(120);
                 thumbnail.setPreserveRatio(false);
 
-                // Play-Icon Overlay
                 Label playIcon = new Label("▶");
                 playIcon.setStyle(
                         "-fx-text-fill: white;" +
-                                "-fx-font-size: 28px;" +
-                                "-fx-effect: dropshadow(gaussian, black, 8, 0, 0, 0);"
+                        "-fx-font-size: 28px;" +
+                        "-fx-effect: dropshadow(gaussian, black, 8, 0, 0, 0);"
                 );
-
                 imagePlaceholder.getChildren().addAll(thumbnail, playIcon);
             } catch (Exception ex) {
                 imagePlaceholder.getChildren().add(new Label("▶ VIDEO"));
@@ -126,11 +129,10 @@ public class Controller implements ExerciseView {
             imagePlaceholder.getChildren().add(new Label("▶ VIDEO"));
         }
 
-        imagePlaceholder.setOnMouseClicked(event -> openVideo(e.videoUrl()));
+        // Klick auf Thumbnail → Detail-Dialog öffnen
+        imagePlaceholder.setOnMouseClicked(event -> openDetailDialog(e));
 
-        // Klick auf die Karte → Video öffnen
-        imagePlaceholder.setOnMouseClicked(event -> openVideo(e.videoUrl()));
-
+        // ── Card Content (unter dem Video) ───────────────────────────────────
         VBox content = new VBox(8);
         content.getStyleClass().add("card-content");
 
@@ -145,17 +147,86 @@ public class Controller implements ExerciseView {
         tagLabel.getStyleClass().add("card-tag");
 
         content.getChildren().addAll(titleLabel, descLabel, tagLabel);
+
+        // Klick auf Inhaltsbereich → ebenfalls Detail-Dialog
+        content.setOnMouseClicked(event -> openDetailDialog(e));
+
         card.getChildren().addAll(imagePlaceholder, content);
         exerciseGrid.getChildren().add(card);
     }
 
-    private void openVideo(String videoUrl) {
-        VideoPlayerView player = new VideoPlayerView(videoUrl);
+    // ── Detail-Dialog ─────────────────────────────────────────────────────────
 
-        Stage videoStage = new Stage();
-        videoStage.setTitle("Video");
-        videoStage.setScene(new Scene(player, 660, 400));
-        videoStage.setOnCloseRequest(e -> player.dispose()); // Ressourcen freigeben
-        videoStage.show();
+    /**
+     * Opens a large detail window (90 % of screen) with the full exercise
+     * description and an embedded VideoPlayerView with all controls.
+     */
+    private void openDetailDialog(Exercise e) {
+        Rectangle2D screen = Screen.getPrimary().getVisualBounds();
+        double dlgW = screen.getWidth()  * 0.90;
+        double dlgH = screen.getHeight() * 0.90;
+
+        // Header: title + category badge
+        Label titleLabel = new Label(e.title());
+        titleLabel.getStyleClass().add("detail-title");
+        titleLabel.setWrapText(true);
+        HBox.setHgrow(titleLabel, Priority.ALWAYS);
+
+        Label categoryLabel = new Label(e.category());
+        categoryLabel.getStyleClass().add("card-tag");
+
+        HBox headerRow = new HBox(12, titleLabel, categoryLabel);
+        headerRow.setAlignment(Pos.CENTER_LEFT);
+
+        Separator sep = new Separator();
+
+        // Description
+        Label descSectionTitle = new Label("Beschreibung");
+        descSectionTitle.getStyleClass().add("detail-section-title");
+
+        String descText = (e.desc() != null && !e.desc().isBlank())
+                ? e.desc()
+                : "Keine Beschreibung vorhanden.";
+        Label descContent = new Label(descText);
+        descContent.getStyleClass().add("detail-description");
+        descContent.setWrapText(true);
+        descContent.setMaxWidth(Double.MAX_VALUE);
+
+        // Video
+        Label videoSectionTitle = new Label("Video");
+        videoSectionTitle.getStyleClass().add("detail-section-title");
+
+        // VideoPlayerView mit angepasster Breite
+        double videoW = dlgW - 100; // Etwas mehr Margin abziehen für sichere Einbettung
+        VideoPlayerView playerView = new VideoPlayerView(e.videoUrl(), videoW);
+
+        // Assemble layout
+        VBox layout = new VBox(18,
+                headerRow, sep,
+                descSectionTitle, descContent,
+                videoSectionTitle, playerView);
+        layout.getStyleClass().add("detail-dialog");
+        layout.setPadding(new Insets(28, 32, 28, 32));
+
+        ScrollPane scroll = new ScrollPane(layout);
+        scroll.setFitToWidth(true);
+        scroll.getStyleClass().add("transparent-scroll");
+        scroll.setStyle("-fx-background-color: #0f1117; -fx-background: #0f1117;");
+
+        Stage dialog = new Stage();
+        dialog.setTitle(e.title() + " – Details");
+
+        Scene scene = new Scene(scroll, dlgW, dlgH);
+        scene.getStylesheets().add(
+                getClass().getResource("/at/htl/mobilitygamesadvisor/style.css").toExternalForm());
+        dialog.setScene(scene);
+
+        // Explizit Breite und Höhe setzen (verhindert winzige Fenster in manchen Window-Managern)
+        dialog.setWidth(dlgW);
+        dialog.setHeight(dlgH);
+        dialog.centerOnScreen();
+
+        dialog.setOnCloseRequest(ev -> playerView.dispose());
+        dialog.show();
     }
 }
