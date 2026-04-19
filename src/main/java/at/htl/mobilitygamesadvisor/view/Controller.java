@@ -221,12 +221,20 @@ public class Controller implements ExerciseView {
                 getClass().getResource("/at/htl/mobilitygamesadvisor/style.css").toExternalForm());
         dialog.setScene(scene);
 
-        // Explizit Breite und Höhe setzen (verhindert winzige Fenster in manchen Window-Managern)
+        // WICHTIG: Min-Size erzwingen, damit Linux/Wayland das Fenster beim 2. Mal nicht verkleinert
+        dialog.setMinWidth(dlgW);
+        dialog.setMinHeight(dlgH);
+
+        dialog.setWidth(dlgW);
+        dialog.setHeight(dlgH);
+
+        dialog.setOnCloseRequest(ev -> playerView.dispose());
+
+        dialog.show();
+
+        // Hack für manche Window-Manager: Größe nach dem Rendern nochmal fixieren + zentrieren
         dialog.setWidth(dlgW);
         dialog.setHeight(dlgH);
         dialog.centerOnScreen();
-
-        dialog.setOnCloseRequest(ev -> playerView.dispose());
-        dialog.show();
     }
 }
