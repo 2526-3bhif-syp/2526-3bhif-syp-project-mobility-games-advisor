@@ -35,7 +35,7 @@
 
     <!-- Content Area with StackPane for Navigation -->
     <StackPane HBox.hgrow="ALWAYS" styleClass="content-area">
-        
+
         <!-- PAGE: Exercises -->
         <VBox fx:id="paneExercises" spacing="20" visible="false">
             <padding><Insets top="30" right="40" bottom="30" left="40"/></padding>

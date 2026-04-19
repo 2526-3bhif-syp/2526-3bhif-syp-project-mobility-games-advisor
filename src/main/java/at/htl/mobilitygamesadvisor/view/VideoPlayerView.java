@@ -1,22 +1,26 @@
 package at.htl.mobilitygamesadvisor.view;
 
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.Slider;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
-import javafx.scene.media.Media;
-import javafx.scene.media.MediaPlayer;
-import javafx.scene.media.MediaView;
-import javafx.util.Duration;
+
+import uk.co.caprica.vlcj.factory.MediaPlayerFactory;
+import uk.co.caprica.vlcj.player.base.MediaPlayer;
+import uk.co.caprica.vlcj.player.embedded.EmbeddedMediaPlayer;
+import uk.co.caprica.vlcj.javafx.videosurface.ImageViewVideoSurface;
 
 public class VideoPlayerView extends VBox {
 
-    private MediaPlayer player;
+    private MediaPlayerFactory mediaPlayerFactory;
+    private EmbeddedMediaPlayer mediaPlayer;
 
     public VideoPlayerView(String videoUrl) {
         this(videoUrl, 640);
@@ -31,12 +35,15 @@ public class VideoPlayerView extends VBox {
             return;
         }
 
-        Media media = new Media(videoUrl);
-        player = new MediaPlayer(media);
+        // Initialize VLCJ
+        mediaPlayerFactory = new MediaPlayerFactory();
+        mediaPlayer = mediaPlayerFactory.mediaPlayers().newEmbeddedMediaPlayer();
 
-        MediaView view = new MediaView(player);
-        view.setFitWidth(width);
-        view.setPreserveRatio(true);
+        // Use ImageView to display VLC frames in JavaFX
+        ImageView videoImageView = new ImageView();
+        videoImageView.setFitWidth(width);
+        videoImageView.setPreserveRatio(true);
+        mediaPlayer.videoSurface().set(new ImageViewVideoSurface(videoImageView));
 
         // ── Timeline Slider ─────────────────────────────────────────────────
         Slider timeline = new Slider(0, 1, 0);
@@ -46,50 +53,53 @@ public class VideoPlayerView extends VBox {
         Label timeLabel = new Label("0:00 / 0:00");
         timeLabel.getStyleClass().add("video-time-label");
 
-        player.currentTimeProperty().addListener((obs, old, now) -> {
-            Duration total = player.getTotalDuration();
-            if (total != null && !total.isUnknown() && total.toMillis() > 0) {
-                timeline.setValue(now.toMillis() / total.toMillis());
-                timeLabel.setText(formatDuration(now) + " / " + formatDuration(total));
+        mediaPlayer.events().addMediaPlayerEventListener(new uk.co.caprica.vlcj.player.base.MediaPlayerEventAdapter() {
+            @Override
+            public void timeChanged(MediaPlayer mp, long newTime) {
+                Platform.runLater(() -> {
+                    long total = mp.status().length();
+                    if (total > 0) {
+                        timeline.setValue((double) newTime / total);
+                        timeLabel.setText(formatDuration(newTime) + " / " + formatDuration(total));
+                    }
+                });
+            }
+            @Override
+            public void error(MediaPlayer mediaPlayer) {
+                System.err.println("VLCJ MediaPlayer Error on URL: " + videoUrl);
             }
         });
 
         // Allow user to scrub
-        timeline.setOnMousePressed(e -> player.pause());
+        timeline.setOnMousePressed(e -> mediaPlayer.controls().pause());
         timeline.setOnMouseReleased(e -> {
-            Duration total = player.getTotalDuration();
-            if (total != null) {
-                player.seek(Duration.millis(timeline.getValue() * total.toMillis()));
-                player.play();
+            long total = mediaPlayer.status().length();
+            if (total > 0) {
+                mediaPlayer.controls().setTime((long) (timeline.getValue() * total));
+                mediaPlayer.controls().play();
             }
         });
 
         // ── Control Buttons ──────────────────────────────────────────────────
         Button rewindBtn = new Button("⏪ -10s");
         rewindBtn.getStyleClass().add("video-ctrl-btn");
-        rewindBtn.setOnAction(e -> {
-            Duration current = player.getCurrentTime();
-            player.seek(current.subtract(Duration.seconds(10)));
-        });
+        rewindBtn.setOnAction(e -> mediaPlayer.controls().skipTime(-10000));
 
-        Button playPauseBtn = new Button("▶ Play");
+        Button playPauseBtn = new Button("⏸ Pause");
         playPauseBtn.getStyleClass().add("video-ctrl-btn-primary");
         playPauseBtn.setOnAction(e -> {
-            if (player.getStatus() == MediaPlayer.Status.PLAYING) {
-                player.pause();
+            if (mediaPlayer.status().isPlaying()) {
+                mediaPlayer.controls().pause();
                 playPauseBtn.setText("▶ Play");
             } else {
-                player.play();
+                mediaPlayer.controls().play();
                 playPauseBtn.setText("⏸ Pause");
             }
         });
 
         Button forwardBtn = new Button("+10s ⏩");
         forwardBtn.getStyleClass().add("video-ctrl-btn");
-        forwardBtn.setOnAction(e -> {
-            Duration current = player.getCurrentTime();
-            player.seek(current.add(Duration.seconds(10)));
-        });
+        forwardBtn.setOnAction(e -> mediaPlayer.controls().skipTime(10000));
 
         Region spacer1 = new Region();
         Region spacer2 = new Region();
@@ -103,18 +113,27 @@ public class VideoPlayerView extends VBox {
         HBox timeRow = new HBox(timeLabel);
         timeRow.setAlignment(Pos.CENTER_RIGHT);
 
-        getChildren().addAll(view, timeline, controls, timeRow);
+        getChildren().addAll(videoImageView, timeline, controls, timeRow);
+
+        // Start playback directly across NGINX docker network (No bypasses!)
+        mediaPlayer.media().play(videoUrl);
     }
 
-    private String formatDuration(Duration d) {
-        int totalSec = (int) d.toSeconds();
-        int min = totalSec / 60;
-        int sec = totalSec % 60;
+    private String formatDuration(long millis) {
+        long totalSec = millis / 1000;
+        long min = totalSec / 60;
+        long sec = totalSec % 60;
         return String.format("%d:%02d", min, sec);
     }
 
     /** Call this when closing the view to free resources. */
     public void dispose() {
-        if (player != null) player.dispose();
+        if (mediaPlayer != null) {
+            mediaPlayer.controls().stop();
+            mediaPlayer.release();
+        }
+        if (mediaPlayerFactory != null) {
+            mediaPlayerFactory.release();
+        }
     }
 }

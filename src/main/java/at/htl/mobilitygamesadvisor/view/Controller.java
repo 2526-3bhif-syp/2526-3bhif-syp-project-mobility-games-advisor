@@ -25,9 +25,7 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import at.htl.mobilitygamesadvisor.model.Exercise;
-import javafx.scene.media.Media;
-import javafx.scene.media.MediaPlayer;
-import javafx.scene.media.MediaView;
+import javafx.stage.Stage;
 
 
 /**
@@ -97,37 +95,18 @@ public class Controller implements ExerciseView {
         card.getStyleClass().add("exercise-card");
         card.setStyle("-fx-cursor: hand;");
 
-        // ── Video Thumbnail ──────────────────────────────────────────────────
+        // ── Video Thumbnail (Placeholder) ────────────────────────────────────
         StackPane imagePlaceholder = new StackPane();
         imagePlaceholder.getStyleClass().add("card-image-placeholder");
         imagePlaceholder.setPrefHeight(120);
 
-        if (e.videoUrl() != null && !e.videoUrl().isBlank()) {
-            try {
-                Media media = new Media(e.videoUrl());
-                MediaPlayer player = new MediaPlayer(media);
-                player.setAutoPlay(false);
-                player.seek(Duration.ZERO);
-                player.pause();
-
-                MediaView thumbnail = new MediaView(player);
-                thumbnail.setFitWidth(220);
-                thumbnail.setFitHeight(120);
-                thumbnail.setPreserveRatio(false);
-
-                Label playIcon = new Label("▶");
-                playIcon.setStyle(
-                        "-fx-text-fill: white;" +
-                        "-fx-font-size: 28px;" +
-                        "-fx-effect: dropshadow(gaussian, black, 8, 0, 0, 0);"
-                );
-                imagePlaceholder.getChildren().addAll(thumbnail, playIcon);
-            } catch (Exception ex) {
-                imagePlaceholder.getChildren().add(new Label("▶ VIDEO"));
-            }
-        } else {
-            imagePlaceholder.getChildren().add(new Label("▶ VIDEO"));
-        }
+        Label playIcon = new Label("▶ VIDEO");
+        playIcon.setStyle(
+                "-fx-text-fill: #f5a62360;" +
+                "-fx-font-size: 22px;" +
+                "-fx-font-weight: bold;"
+        );
+        imagePlaceholder.getChildren().add(playIcon);
 
         // Klick auf Thumbnail → Detail-Dialog öffnen
         imagePlaceholder.setOnMouseClicked(event -> openDetailDialog(e));
@@ -196,15 +175,20 @@ public class Controller implements ExerciseView {
         Label videoSectionTitle = new Label("Video");
         videoSectionTitle.getStyleClass().add("detail-section-title");
 
-        // VideoPlayerView mit angepasster Breite
-        double videoW = dlgW - 100; // Etwas mehr Margin abziehen für sichere Einbettung
+        // VideoPlayerView noch kleiner machen (maximal 550px Breite)
+        double videoW = Math.min(dlgW - 100, 550);
         VideoPlayerView playerView = new VideoPlayerView(e.videoUrl(), videoW);
+
+        // Den gesamten VideoPlayer zentrieren
+        HBox videoWrapper = new HBox(playerView);
+        videoWrapper.setAlignment(Pos.CENTER);
+        videoWrapper.setMaxWidth(Double.MAX_VALUE);
 
         // Assemble layout
         VBox layout = new VBox(18,
                 headerRow, sep,
                 descSectionTitle, descContent,
-                videoSectionTitle, playerView);
+                videoSectionTitle, videoWrapper);
         layout.getStyleClass().add("detail-dialog");
         layout.setPadding(new Insets(28, 32, 28, 32));
 

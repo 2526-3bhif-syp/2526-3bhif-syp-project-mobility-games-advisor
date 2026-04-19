@@ -4,6 +4,8 @@ module at.htl.mobilitygamesadvisor {
     requires javafx.media;
     requires java.sql;
     requires org.postgresql.jdbc;
+    requires uk.co.caprica.vlcj;
+    requires uk.co.caprica.vlcj.javafx;
 
     opens at.htl.mobilitygamesadvisor to javafx.fxml;
     opens at.htl.mobilitygamesadvisor.view to javafx.fxml;
