@@ -5,8 +5,6 @@ import at.htl.mobilitygamesadvisor.presenter.ExercisePresenter;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.geometry.Rectangle2D;
-import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
@@ -17,24 +15,19 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.stage.Screen;
-import javafx.stage.Stage;
-import javafx.util.Duration;
 
 import java.util.List;
 import java.util.function.Consumer;
 
 import at.htl.mobilitygamesadvisor.model.Exercise;
-import javafx.stage.Stage;
-
 
 /**
- * VIEW (JavaFX Controller) — purely responsible for rendering.
+ * VIEW (JavaFX Controller) – purely responsible for rendering.
  * All logic lives in {@link ExercisePresenter}.
  */
 public class Controller implements ExerciseView {
 
-    // ── FXML bindings ────────────────────────────────────────────────────────
+    // —— FXML bindings ————————————————————————————————————————————————————————
     @FXML private FlowPane  exerciseGrid;
     @FXML private TextField searchField;
 
@@ -43,15 +36,34 @@ public class Controller implements ExerciseView {
     @FXML private Button  btnExercises,  btnCategories,
             btnTracking,   btnCollection;
 
-    // ── MVP wiring ───────────────────────────────────────────────────────────
+    // Detail-Pane (programmatisch erzeugt und in den StackPane eingefügt)
+    private VBox paneDetail;
+    private VideoPlayerView currentPlayer;
+
+    // —— MVP wiring ————————————————————————————————————————————————————————————
 
     @FXML
     public void initialize() {
         new ExercisePresenter(new ExerciseRepository(), this);
+        buildDetailPane();
         showExercises();
     }
 
-    // ── ExerciseView implementation ──────────────────────────────────────────
+    // —— Detail-Pane bauen ————————————————————————————————————————————————————
+
+    private void buildDetailPane() {
+        // Den StackPane (Parent von paneExercises) ermitteln
+        StackPane contentArea = (StackPane) paneExercises.getParent();
+
+        paneDetail = new VBox(0);
+        paneDetail.setVisible(false);
+        paneDetail.getStyleClass().add("detail-dialog");
+        paneDetail.setStyle("-fx-background-color: #0f1117;");
+
+        contentArea.getChildren().add(paneDetail);
+    }
+
+    // —— ExerciseView implementation ——————————————————————————————————————————
 
     @Override
     public void showExercises(List<Exercise> exercises) {
@@ -68,7 +80,7 @@ public class Controller implements ExerciseView {
         }
     }
 
-    // ── Navigation (pure view concern) ───────────────────────────────────────
+    // —— Navigation (pure view concern) ———————————————————————————————————————
 
     @FXML private void showExercises()  { switchPage(paneExercises,  btnExercises);  }
     @FXML private void showCategories() { switchPage(paneCategories, btnCategories); }
@@ -76,6 +88,9 @@ public class Controller implements ExerciseView {
     @FXML private void showCollection() { switchPage(paneCollection, btnCollection); }
 
     private void switchPage(VBox activePane, Button activeButton) {
+        // Detail-Pane verstecken und Player stoppen wenn vorhanden
+        hideDetailPane();
+
         List.of(paneExercises, paneCategories, paneTracking, paneCollection)
                 .forEach(p -> p.setVisible(false));
         activePane.setVisible(true);
@@ -88,30 +103,29 @@ public class Controller implements ExerciseView {
                 .forEach(b -> b.getStyleClass().remove("active-nav"));
     }
 
-    // ── Card rendering ────────────────────────────────────────────────────────
+    // —— Card rendering ————————————————————————————————————————————————————————
 
     private void addExerciseCard(Exercise e) {
         VBox card = new VBox();
         card.getStyleClass().add("exercise-card");
         card.setStyle("-fx-cursor: hand;");
 
-        // ── Video Thumbnail (Placeholder) ────────────────────────────────────
-        StackPane imagePlaceholder = new StackPane();
+        // —— Video Thumbnail (Placeholder) ————————————————————————————————————
+        javafx.scene.layout.StackPane imagePlaceholder = new javafx.scene.layout.StackPane();
         imagePlaceholder.getStyleClass().add("card-image-placeholder");
         imagePlaceholder.setPrefHeight(120);
 
         Label playIcon = new Label("▶ VIDEO");
         playIcon.setStyle(
                 "-fx-text-fill: #f5a62360;" +
-                "-fx-font-size: 22px;" +
-                "-fx-font-weight: bold;"
+                        "-fx-font-size: 22px;" +
+                        "-fx-font-weight: bold;"
         );
         imagePlaceholder.getChildren().add(playIcon);
 
-        // Klick auf Thumbnail → Detail-Dialog öffnen
-        imagePlaceholder.setOnMouseClicked(event -> openDetailDialog(e));
+        imagePlaceholder.setOnMouseClicked(event -> openDetailInPane(e));
 
-        // ── Card Content (unter dem Video) ───────────────────────────────────
+        // —— Card Content (unter dem Video) ———————————————————————————————————
         VBox content = new VBox(8);
         content.getStyleClass().add("card-content");
 
@@ -126,26 +140,50 @@ public class Controller implements ExerciseView {
         tagLabel.getStyleClass().add("card-tag");
 
         content.getChildren().addAll(titleLabel, descLabel, tagLabel);
-
-        // Klick auf Inhaltsbereich → ebenfalls Detail-Dialog
-        content.setOnMouseClicked(event -> openDetailDialog(e));
+        content.setOnMouseClicked(event -> openDetailInPane(e));
 
         card.getChildren().addAll(imagePlaceholder, content);
         exerciseGrid.getChildren().add(card);
     }
 
-    // ── Detail-Dialog ─────────────────────────────────────────────────────────
+    // —— Detail in gleichem Fenster öffnen ————————————————————————————————————
 
-    /**
-     * Opens a large detail window (90 % of screen) with the full exercise
-     * description and an embedded VideoPlayerView with all controls.
-     */
-    private void openDetailDialog(Exercise e) {
-        Rectangle2D screen = Screen.getPrimary().getVisualBounds();
-        double dlgW = screen.getWidth()  * 0.90;
-        double dlgH = screen.getHeight() * 0.90;
+    private void openDetailInPane(Exercise e) {
+        // Alten Player stoppen
+        disposeCurrentPlayer();
 
-        // Header: title + category badge
+        paneDetail.getChildren().clear();
+
+        // —— Back-Button ——————————————————————————————————————————————————————
+        String styleNormal = "-fx-background-color: transparent;" +
+                "-fx-text-fill: #f5a623;" +
+                "-fx-font-size: 14px;" +
+                "-fx-cursor: hand;" +
+                "-fx-border-color: #f5a623;" +
+                "-fx-border-radius: 6px;" +
+                "-fx-padding: 8 16 8 16;";
+        String styleHover  = "-fx-background-color: #f5a62322;" +
+                "-fx-text-fill: #f5a623;" +
+                "-fx-font-size: 14px;" +
+                "-fx-cursor: hand;" +
+                "-fx-border-color: #f5a623;" +
+                "-fx-border-radius: 6px;" +
+                "-fx-padding: 8 16 8 16;";
+
+        Button backBtn = new Button("← Zurück zur Übersicht");
+        backBtn.getStyleClass().add("video-ctrl-btn");
+        backBtn.setStyle(styleNormal);
+        backBtn.setOnMouseEntered(ev -> backBtn.setStyle(styleHover));
+        backBtn.setOnMouseExited(ev  -> backBtn.setStyle(styleNormal));
+        backBtn.setOnAction(ev -> {
+            hideDetailPane();
+            switchPage(paneExercises, btnExercises);
+        });
+
+        HBox backRow = new HBox(backBtn);
+        backRow.setPadding(new Insets(28, 40, 8, 40));
+
+        // —— Header ———————————————————————————————————————————————————————————
         Label titleLabel = new Label(e.title());
         titleLabel.getStyleClass().add("detail-title");
         titleLabel.setWrapText(true);
@@ -156,12 +194,16 @@ public class Controller implements ExerciseView {
 
         HBox headerRow = new HBox(12, titleLabel, categoryLabel);
         headerRow.setAlignment(Pos.CENTER_LEFT);
+        headerRow.setPadding(new Insets(12, 40, 8, 40));
 
         Separator sep = new Separator();
+        sep.setPadding(new Insets(0, 40, 0, 40));
 
-        // Description
+        // —— Beschreibung —————————————————————————————————————————————————————
         Label descSectionTitle = new Label("Beschreibung");
         descSectionTitle.getStyleClass().add("detail-section-title");
+        HBox descTitleRow = new HBox(descSectionTitle);
+        descTitleRow.setPadding(new Insets(20, 40, 6, 40));
 
         String descText = (e.desc() != null && !e.desc().isBlank())
                 ? e.desc()
@@ -169,56 +211,60 @@ public class Controller implements ExerciseView {
         Label descContent = new Label(descText);
         descContent.getStyleClass().add("detail-description");
         descContent.setWrapText(true);
-        descContent.setMaxWidth(Double.MAX_VALUE);
+        HBox.setHgrow(descContent, Priority.ALWAYS);
+        HBox descContentRow = new HBox(descContent);
+        descContentRow.setPadding(new Insets(10, 40, 0, 40));
 
-        // Video
+        // —— Video ————————————————————————————————————————————————————————————
         Label videoSectionTitle = new Label("Video");
         videoSectionTitle.getStyleClass().add("detail-section-title");
+        HBox videoTitleRow = new HBox(videoSectionTitle);
+        videoTitleRow.setPadding(new Insets(10, 40, 8, 40));
 
-        // VideoPlayerView noch kleiner machen (maximal 550px Breite)
-        double videoW = Math.min(dlgW - 100, 550);
-        VideoPlayerView playerView = new VideoPlayerView(e.videoUrl(), videoW);
+        currentPlayer = new VideoPlayerView(e.videoUrl(), 550);
 
-        // Den gesamten VideoPlayer zentrieren
-        HBox videoWrapper = new HBox(playerView);
+        HBox videoWrapper = new HBox(currentPlayer);
         videoWrapper.setAlignment(Pos.CENTER);
         videoWrapper.setMaxWidth(Double.MAX_VALUE);
+        videoWrapper.setPadding(new Insets(0, 40, 32, 40));
 
-        // Assemble layout
-        VBox layout = new VBox(18,
-                headerRow, sep,
-                descSectionTitle, descContent,
-                videoSectionTitle, videoWrapper);
-        layout.getStyleClass().add("detail-dialog");
-        layout.setPadding(new Insets(28, 32, 28, 32));
+        // —— Zusammenbauen ————————————————————————————————————————————————————
+        VBox innerLayout = new VBox(0,
+                backRow,
+                headerRow,
+                sep,
+                descTitleRow,
+                descContentRow,
+                videoTitleRow,
+                videoWrapper
+        );
+        innerLayout.setStyle("-fx-background-color: #0f1117;");
 
-        ScrollPane scroll = new ScrollPane(layout);
+        ScrollPane scroll = new ScrollPane(innerLayout);
         scroll.setFitToWidth(true);
         scroll.getStyleClass().add("transparent-scroll");
         scroll.setStyle("-fx-background-color: #0f1117; -fx-background: #0f1117;");
+        VBox.setVgrow(scroll, Priority.ALWAYS);
 
-        Stage dialog = new Stage();
-        dialog.setTitle(e.title() + " – Details");
+        paneDetail.getChildren().add(scroll);
 
-        Scene scene = new Scene(scroll, dlgW, dlgH);
-        scene.getStylesheets().add(
-                getClass().getResource("/at/htl/mobilitygamesadvisor/style.css").toExternalForm());
-        dialog.setScene(scene);
+        // Alle anderen Panes ausblenden, Detail einblenden
+        List.of(paneExercises, paneCategories, paneTracking, paneCollection)
+                .forEach(p -> p.setVisible(false));
+        paneDetail.setVisible(true);
+    }
 
-        // WICHTIG: Min-Size erzwingen, damit Linux/Wayland das Fenster beim 2. Mal nicht verkleinert
-        dialog.setMinWidth(dlgW);
-        dialog.setMinHeight(dlgH);
+    private void hideDetailPane() {
+        if (paneDetail != null) {
+            paneDetail.setVisible(false);
+        }
+        disposeCurrentPlayer();
+    }
 
-        dialog.setWidth(dlgW);
-        dialog.setHeight(dlgH);
-
-        dialog.setOnCloseRequest(ev -> playerView.dispose());
-
-        dialog.show();
-
-        // Hack für manche Window-Manager: Größe nach dem Rendern nochmal fixieren + zentrieren
-        dialog.setWidth(dlgW);
-        dialog.setHeight(dlgH);
-        dialog.centerOnScreen();
+    private void disposeCurrentPlayer() {
+        if (currentPlayer != null) {
+            currentPlayer.dispose();
+            currentPlayer = null;
+        }
     }
 }
