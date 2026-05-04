@@ -22,6 +22,10 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import at.htl.mobilitygamesadvisor.model.Exercise;
+import javafx.scene.media.Media;
+import javafx.scene.media.MediaPlayer;
+import javafx.scene.media.MediaView;
+import javafx.util.Duration;
 
 /**
  * VIEW (JavaFX Controller) – purely responsible for rendering.
@@ -213,7 +217,8 @@ public class Controller implements ExerciseView {
         HBox row = new HBox(12, nameLabel, renameField, countLabel, renameBtn, deleteBtn, saveBtn, cancelBtn, confirmBtn, abortBtn);
         row.setAlignment(Pos.CENTER_LEFT);
         row.setPadding(new Insets(10, 16, 10, 16));
-        row.setStyle("-fx-background-color: #1a1d27; -fx-background-radius: 8px;");
+        row.setStyle("-fx-background-color: #ffffff; -fx-background-radius: 8px;" +
+                "-fx-border-color: #e0ece8; -fx-border-radius: 8px; -fx-border-width: 1;");
         return row;
     }
 
@@ -225,34 +230,33 @@ public class Controller implements ExerciseView {
         return btn;
     }
 
+
     private Button buildDeleteBtn(String text) {
         String normal = "-fx-background-color: transparent;" +
-                "-fx-text-fill: #e05252;-fx-font-size: 13px;-fx-cursor: hand;" +
-                "-fx-border-color: #e05252;-fx-border-radius: 6px;-fx-padding: 6 14 6 14;";
-        String hover  = "-fx-background-color: #e0525222;" +
-                "-fx-text-fill: #e05252;-fx-font-size: 13px;-fx-cursor: hand;" +
-                "-fx-border-color: #e05252;-fx-border-radius: 6px;-fx-padding: 6 14 6 14;";
+                "-fx-text-fill: #c0392b;-fx-font-size: 13px;-fx-cursor: hand;" +
+                "-fx-border-color: #c0392b;-fx-border-radius: 6px;-fx-padding: 6 14 6 14;";
+        String hover  = "-fx-background-color: #c0392b18;" +
+                "-fx-text-fill: #c0392b;-fx-font-size: 13px;-fx-cursor: hand;" +
+                "-fx-border-color: #c0392b;-fx-border-radius: 6px;-fx-padding: 6 14 6 14;";
         Button btn = new Button(text);
         btn.setStyle(normal);
         btn.setOnMouseEntered(ev -> btn.setStyle(hover));
         btn.setOnMouseExited(ev  -> btn.setStyle(normal));
         return btn;
     }
-
     private Button buildSecondaryBtn(String text) {
         String normal = "-fx-background-color: transparent;" +
-                "-fx-text-fill: #f5a623;-fx-font-size: 13px;-fx-cursor: hand;" +
-                "-fx-border-color: #f5a623;-fx-border-radius: 6px;-fx-padding: 6 14 6 14;";
-        String hover  = "-fx-background-color: #f5a62322;" +
-                "-fx-text-fill: #f5a623;-fx-font-size: 13px;-fx-cursor: hand;" +
-                "-fx-border-color: #f5a623;-fx-border-radius: 6px;-fx-padding: 6 14 6 14;";
+                "-fx-text-fill: #2d7a5c;-fx-font-size: 13px;-fx-cursor: hand;" +
+                "-fx-border-color: #2d7a5c;-fx-border-radius: 6px;-fx-padding: 6 14 6 14;";
+        String hover  = "-fx-background-color: #2d7a5c18;" +
+                "-fx-text-fill: #2d7a5c;-fx-font-size: 13px;-fx-cursor: hand;" +
+                "-fx-border-color: #2d7a5c;-fx-border-radius: 6px;-fx-padding: 6 14 6 14;";
         Button btn = new Button(text);
         btn.setStyle(normal);
         btn.setOnMouseEntered(ev -> btn.setStyle(hover));
         btn.setOnMouseExited(ev  -> btn.setStyle(normal));
         return btn;
     }
-
     // —— ExerciseView implementation ——————————————————————————————————————————
 
     @Override
@@ -296,17 +300,44 @@ public class Controller implements ExerciseView {
     private void addExerciseCard(Exercise e) {
         VBox card = new VBox();
         card.getStyleClass().add("exercise-card");
-        card.setStyle("-fx-cursor: hand;");
 
-        javafx.scene.layout.StackPane imagePlaceholder = new javafx.scene.layout.StackPane();
+        // Thumbnail statt "▶ VIDEO" Text
+        StackPane imagePlaceholder = new StackPane();
         imagePlaceholder.getStyleClass().add("card-image-placeholder");
         imagePlaceholder.setPrefHeight(120);
 
-        Label playIcon = new Label("▶ VIDEO");
-        playIcon.setStyle("-fx-text-fill: #f5a62360;-fx-font-size: 22px;-fx-font-weight: bold;");
-        imagePlaceholder.getChildren().add(playIcon);
-        imagePlaceholder.setOnMouseClicked(event -> openDetailInPane(e));
+        if (e.videoUrl() != null && !e.videoUrl().isBlank()) {
+            try {
+                Media media = new Media(e.videoUrl());
+                MediaPlayer player = new MediaPlayer(media);
 
+                // Erstes Frame laden und dann sofort pausieren
+                player.setAutoPlay(false);
+                player.seek(Duration.ZERO);
+                player.pause();
+
+                MediaView thumbnail = new MediaView(player);
+                thumbnail.setFitWidth(220);
+                thumbnail.setFitHeight(120);
+                thumbnail.setPreserveRatio(false);
+
+                // Play-Icon Overlay
+                Label playIcon = new Label("▶");
+                playIcon.setStyle(
+                        "-fx-text-fill: white;" +
+                                "-fx-font-size: 28px;" +
+                                "-fx-effect: dropshadow(gaussian, black, 8, 0, 0, 0);"
+                );
+
+                imagePlaceholder.getChildren().addAll(thumbnail, playIcon);
+            } catch (Exception ex) {
+                imagePlaceholder.getChildren().add(new Label("▶ VIDEO"));
+            }
+        } else {
+            imagePlaceholder.getChildren().add(new Label("▶ VIDEO"));
+        }
+
+        imagePlaceholder.setOnMouseClicked(event -> openDetailInPane(e));
         VBox content = new VBox(8);
         content.getStyleClass().add("card-content");
 
@@ -321,23 +352,20 @@ public class Controller implements ExerciseView {
         tagLabel.getStyleClass().add("card-tag");
 
         content.getChildren().addAll(titleLabel, descLabel, tagLabel);
-        content.setOnMouseClicked(event -> openDetailInPane(e));
-
         card.getChildren().addAll(imagePlaceholder, content);
         exerciseGrid.getChildren().add(card);
     }
-
     // —— Detail in gleichem Fenster öffnen ————————————————————————————————————
 
     private void openDetailInPane(Exercise e) {
         disposeCurrentPlayer();
         paneDetail.getChildren().clear();
 
-        String styleNormal = "-fx-background-color: transparent;-fx-text-fill: #f5a623;" +
-                "-fx-font-size: 14px;-fx-cursor: hand;-fx-border-color: #f5a623;" +
+        String styleNormal = "-fx-background-color: transparent;-fx-text-fill: #2d7a5c;" +
+                "-fx-font-size: 14px;-fx-cursor: hand;-fx-border-color: #2d7a5c;" +
                 "-fx-border-radius: 6px;-fx-padding: 8 16 8 16;";
-        String styleHover  = "-fx-background-color: #f5a62322;-fx-text-fill: #f5a623;" +
-                "-fx-font-size: 14px;-fx-cursor: hand;-fx-border-color: #f5a623;" +
+        String styleHover  = "-fx-background-color: #2d7a5c18;-fx-text-fill: #2d7a5c;" +
+                "-fx-font-size: 14px;-fx-cursor: hand;-fx-border-color: #2d7a5c;" +
                 "-fx-border-radius: 6px;-fx-padding: 8 16 8 16;";
 
         Button backBtn = new Button("← Zurück zur Übersicht");
@@ -376,9 +404,9 @@ public class Controller implements ExerciseView {
         categoryCombo.getItems().addAll(categoryRepo.getAll());
         categoryCombo.setValue(e.category());
         categoryCombo.setStyle(
-                "-fx-background-color: #1a1d27;" +
-                        "-fx-text-fill: #e0e0e0;" +
-                        "-fx-border-color: #2e3347;" +
+                "-fx-background-color: #ffffff;" +
+                        "-fx-text-fill: #1a2e2a;" +
+                        "-fx-border-color: #d8e4e0;" +
                         "-fx-border-radius: 6px;" +
                         "-fx-background-radius: 6px;" +
                         "-fx-pref-width: 240px;"
@@ -386,7 +414,7 @@ public class Controller implements ExerciseView {
 
         // Feedback-Label (wird nach dem Speichern kurz angezeigt)
         Label savedLabel = new Label("✔ Gespeichert");
-        savedLabel.setStyle("-fx-text-fill: #4caf50;-fx-font-size: 13px;");
+        savedLabel.setStyle("-fx-text-fill: #2d7a5c;-fx-font-size: 13px;");
         savedLabel.setVisible(false);
 
         Button assignBtn = buildActionBtn("Zuweisen");
@@ -446,12 +474,13 @@ public class Controller implements ExerciseView {
                 descTitleRow, descContentRow,
                 videoTitleRow, videoWrapper
         );
-        innerLayout.setStyle("-fx-background-color: #0f1117;");
+        // innerLayout background:
+        innerLayout.setStyle("-fx-background-color: #f4f6f5;");
 
         ScrollPane scroll = new ScrollPane(innerLayout);
         scroll.setFitToWidth(true);
         scroll.getStyleClass().add("transparent-scroll");
-        scroll.setStyle("-fx-background-color: #0f1117; -fx-background: #0f1117;");
+        scroll.setStyle("-fx-background-color: #f4f6f5; -fx-background: #f4f6f5;");
         VBox.setVgrow(scroll, Priority.ALWAYS);
 
         paneDetail.getChildren().add(scroll);
