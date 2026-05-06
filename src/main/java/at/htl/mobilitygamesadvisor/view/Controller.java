@@ -18,6 +18,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -47,6 +48,7 @@ public class Controller implements ExerciseView {
 
     private final CategoryRepository categoryRepo   = new CategoryRepository();
     private final ExerciseRepository  exerciseRepo  = new ExerciseRepository();
+    private final List<Exercise>      collection    = new ArrayList<>();
 
     // —— MVP wiring ————————————————————————————————————————————————————————————
 
@@ -222,6 +224,86 @@ public class Controller implements ExerciseView {
         return row;
     }
 
+    // —— Sammelmappe-Pane bauen ———————————————————————————————————————————————
+
+    private void buildCollectionPane() {
+        paneCollection.getChildren().clear();
+        paneCollection.setSpacing(20);
+        paneCollection.setPadding(new Insets(30, 40, 30, 40));
+
+        Label header = new Label("Sammelmappe / Tagesplan");
+        header.getStyleClass().add("header-text");
+
+        Label subtitle = new Label("Übungen für die heutige Sitzung");
+        subtitle.getStyleClass().add("header-subtitle");
+
+        Separator sep = new Separator();
+
+        if (collection.isEmpty()) {
+            Label empty = new Label("Deine Sammelmappe ist noch leer. Füge Übungen über die Übersicht hinzu.");
+            empty.getStyleClass().add("card-description");
+            empty.setWrapText(true);
+
+            Button goToExercises = buildActionBtn("→ Zu den Übungen");
+            goToExercises.setOnAction(ev -> showExercises());
+
+            paneCollection.getChildren().addAll(header, subtitle, sep, empty, goToExercises);
+            return;
+        }
+
+        Label countLabel = new Label(collection.size() + " Übung" + (collection.size() == 1 ? "" : "en") + " in der Sammelmappe");
+        countLabel.getStyleClass().add("card-description");
+
+        Button clearBtn = buildDeleteBtn("🗑 Sammelmappe leeren");
+        clearBtn.setOnAction(ev -> {
+            collection.clear();
+            buildCollectionPane();
+            showExercises(exerciseRepo.search(searchField.getText()));
+        });
+
+        HBox topRow = new HBox(12, countLabel, clearBtn);
+        topRow.setAlignment(Pos.CENTER_LEFT);
+
+        VBox list = new VBox(10);
+        for (Exercise e : collection) {
+            list.getChildren().add(buildCollectionRow(e));
+        }
+
+        ScrollPane scroll = new ScrollPane(list);
+        scroll.setFitToWidth(true);
+        scroll.getStyleClass().add("transparent-scroll");
+        scroll.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
+        VBox.setVgrow(scroll, Priority.ALWAYS);
+
+        paneCollection.getChildren().addAll(header, subtitle, sep, topRow, scroll);
+    }
+
+    private HBox buildCollectionRow(Exercise e) {
+        Label titleLabel = new Label(e.title());
+        titleLabel.getStyleClass().add("card-title");
+        titleLabel.setMinWidth(200);
+
+        Label tagLabel = new Label(e.category());
+        tagLabel.getStyleClass().add("card-tag");
+
+        Button openBtn = buildSecondaryBtn("▶ Abspielen");
+        openBtn.setOnAction(ev -> openDetailInPane(e, paneCollection, btnCollection));
+
+        Button removeBtn = buildDeleteBtn("✖ Entfernen");
+        removeBtn.setOnAction(ev -> {
+            collection.remove(e);
+            buildCollectionPane();
+            showExercises(exerciseRepo.search(searchField.getText()));
+        });
+
+        HBox row = new HBox(12, titleLabel, tagLabel, openBtn, removeBtn);
+        row.setAlignment(Pos.CENTER_LEFT);
+        row.setPadding(new Insets(10, 16, 10, 16));
+        row.setStyle("-fx-background-color: #ffffff; -fx-background-radius: 8px;" +
+                "-fx-border-color: #e0ece8; -fx-border-radius: 8px; -fx-border-width: 1;");
+        return row;
+    }
+
     // —— Button-Hilfsmethoden —————————————————————————————————————————————————
 
     private Button buildActionBtn(String text) {
@@ -279,10 +361,13 @@ public class Controller implements ExerciseView {
     @FXML private void showExercises()  { switchPage(paneExercises,  btnExercises);  }
     @FXML private void showCategories() { buildCategoryPane(); switchPage(paneCategories, btnCategories); }
     @FXML private void showTracking()   { switchPage(paneTracking,   btnTracking);   }
-    @FXML private void showCollection() { switchPage(paneCollection, btnCollection); }
+    @FXML private void showCollection() { buildCollectionPane(); switchPage(paneCollection, btnCollection); }
 
     private void switchPage(VBox activePane, Button activeButton) {
         hideDetailPane();
+        if (activePane == paneExercises) {
+            showExercises(exerciseRepo.search(searchField.getText()));
+        }
         List.of(paneExercises, paneCategories, paneTracking, paneCollection)
                 .forEach(p -> p.setVisible(false));
         activePane.setVisible(true);
@@ -337,7 +422,7 @@ public class Controller implements ExerciseView {
             imagePlaceholder.getChildren().add(new Label("▶ VIDEO"));
         }
 
-        imagePlaceholder.setOnMouseClicked(event -> openDetailInPane(e));
+        imagePlaceholder.setOnMouseClicked(event -> openDetailInPane(e, paneExercises, btnExercises));
         VBox content = new VBox(8);
         content.getStyleClass().add("card-content");
 
@@ -351,13 +436,35 @@ public class Controller implements ExerciseView {
         Label tagLabel = new Label(e.category());
         tagLabel.getStyleClass().add("card-tag");
 
-        content.getChildren().addAll(titleLabel, descLabel, tagLabel);
+        String cardBtnNormal = "-fx-background-color: transparent;-fx-text-fill: #2d7a5c;" +
+                "-fx-font-size: 11px;-fx-cursor: hand;-fx-padding: 4 8 4 8;" +
+                "-fx-border-color: #2d7a5c;-fx-border-radius: 6px;-fx-border-width: 1;";
+        String cardBtnAdded = "-fx-background-color: #e8f4ef;-fx-text-fill: #2d7a5c;" +
+                "-fx-font-size: 11px;-fx-cursor: hand;-fx-padding: 4 8 4 8;" +
+                "-fx-border-color: #5cad8a;-fx-border-radius: 6px;-fx-border-width: 1;";
+        boolean cardInitAdded = collection.stream().anyMatch(ex -> ex.title().equals(e.title()));
+        Button addBtn = new Button(cardInitAdded ? "✔ Entfernen" : "+ Sammelmappe");
+        addBtn.setStyle(cardInitAdded ? cardBtnAdded : cardBtnNormal);
+        addBtn.setOnAction(ev -> {
+            boolean inCollection = collection.stream().anyMatch(ex -> ex.title().equals(e.title()));
+            if (inCollection) {
+                collection.removeIf(ex -> ex.title().equals(e.title()));
+                addBtn.setText("+ Sammelmappe");
+                addBtn.setStyle(cardBtnNormal);
+            } else {
+                collection.add(e);
+                addBtn.setText("✔ Entfernen");
+                addBtn.setStyle(cardBtnAdded);
+            }
+        });
+
+        content.getChildren().addAll(titleLabel, descLabel, tagLabel, addBtn);
         card.getChildren().addAll(imagePlaceholder, content);
         exerciseGrid.getChildren().add(card);
     }
     // —— Detail in gleichem Fenster öffnen ————————————————————————————————————
 
-    private void openDetailInPane(Exercise e) {
+    private void openDetailInPane(Exercise e, VBox returnPane, Button returnBtn) {
         disposeCurrentPlayer();
         paneDetail.getChildren().clear();
 
@@ -373,7 +480,11 @@ public class Controller implements ExerciseView {
         backBtn.setStyle(styleNormal);
         backBtn.setOnMouseEntered(ev -> backBtn.setStyle(styleHover));
         backBtn.setOnMouseExited(ev  -> backBtn.setStyle(styleNormal));
-        backBtn.setOnAction(ev -> { hideDetailPane(); switchPage(paneExercises, btnExercises); });
+        backBtn.setOnAction(ev -> {
+            hideDetailPane();
+            if (returnPane == paneCollection) buildCollectionPane();
+            switchPage(returnPane, returnBtn);
+        });
 
         HBox backRow = new HBox(backBtn);
         backRow.setPadding(new Insets(28, 40, 8, 40));
@@ -387,7 +498,26 @@ public class Controller implements ExerciseView {
         Label categoryBadge = new Label(e.category());
         categoryBadge.getStyleClass().add("card-tag");
 
-        HBox headerRow = new HBox(12, titleLabel, categoryBadge);
+        String detailBtnAdded = "-fx-background-color: #5cad8a;-fx-text-fill: #ffffff;" +
+                "-fx-font-size: 13px;-fx-padding: 10 20 10 20;" +
+                "-fx-background-radius: 10;-fx-cursor: hand;";
+        boolean detailInitAdded = collection.stream().anyMatch(ex -> ex.title().equals(e.title()));
+        Button collectionBtn = buildActionBtn(detailInitAdded ? "✔ Entfernen" : "+ Zur Sammelmappe");
+        if (detailInitAdded) collectionBtn.setStyle(detailBtnAdded);
+        collectionBtn.setOnAction(ev -> {
+            boolean inCollection = collection.stream().anyMatch(ex -> ex.title().equals(e.title()));
+            if (inCollection) {
+                collection.removeIf(ex -> ex.title().equals(e.title()));
+                collectionBtn.setText("+ Zur Sammelmappe");
+                collectionBtn.setStyle("");
+            } else {
+                collection.add(e);
+                collectionBtn.setText("✔ Entfernen");
+                collectionBtn.setStyle(detailBtnAdded);
+            }
+        });
+
+        HBox headerRow = new HBox(12, titleLabel, categoryBadge, collectionBtn);
         headerRow.setAlignment(Pos.CENTER_LEFT);
         headerRow.setPadding(new Insets(12, 40, 8, 40));
 
