@@ -6,10 +6,12 @@ import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.Slider;
+import javafx.scene.control.ProgressIndicator;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 
 import uk.co.caprica.vlcj.factory.MediaPlayerFactory;
@@ -35,8 +37,10 @@ public class VideoPlayerView extends VBox {
             return;
         }
 
-        // Initialize VLCJ
-        mediaPlayerFactory = new MediaPlayerFactory();
+        // avformat demuxer handles fragmented MP4 seeking correctly; VLC's native mp4 demuxer
+        // produces "fragment sequence discontinuity" errors. Single-threaded decoding avoids
+        // "thread_get_buffer() failed" and "co located POCs unavailable" errors after seeks.
+        mediaPlayerFactory = new MediaPlayerFactory("--avcodec-hw=none", "--demux=avformat", "--avcodec-threads=1");
         mediaPlayer = mediaPlayerFactory.mediaPlayers().newEmbeddedMediaPlayer();
 
         // Use ImageView to display VLC frames in JavaFX
@@ -44,6 +48,10 @@ public class VideoPlayerView extends VBox {
         videoImageView.setFitWidth(width);
         videoImageView.setPreserveRatio(true);
         mediaPlayer.videoSurface().set(new ImageViewVideoSurface(videoImageView));
+
+        ProgressIndicator loadingSpinner = new ProgressIndicator();
+        loadingSpinner.setMaxSize(60, 60);
+        StackPane videoStack = new StackPane(videoImageView, loadingSpinner);
 
         // ── Timeline Slider ─────────────────────────────────────────────────
         Slider timeline = new Slider(0, 1, 0);
@@ -65,7 +73,16 @@ public class VideoPlayerView extends VBox {
                 });
             }
             @Override
+            public void playing(MediaPlayer mp) {
+                Platform.runLater(() -> loadingSpinner.setVisible(false));
+            }
+            @Override
+            public void buffering(MediaPlayer mp, float newCache) {
+                Platform.runLater(() -> loadingSpinner.setVisible(newCache < 100f));
+            }
+            @Override
             public void error(MediaPlayer mediaPlayer) {
+                Platform.runLater(() -> loadingSpinner.setVisible(false));
                 System.err.println("VLCJ MediaPlayer Error on URL: " + videoUrl);
             }
         });
@@ -83,7 +100,7 @@ public class VideoPlayerView extends VBox {
         // ── Control Buttons ──────────────────────────────────────────────────
         Button rewindBtn = new Button("⏪ -10s");
         rewindBtn.getStyleClass().add("video-ctrl-btn");
-        rewindBtn.setOnAction(e -> mediaPlayer.controls().skipTime(-10000));
+        rewindBtn.setOnAction(e -> seekBy(-10000));
 
         Button playPauseBtn = new Button("⏸ Pause");
         playPauseBtn.getStyleClass().add("video-ctrl-btn-primary");
@@ -99,7 +116,7 @@ public class VideoPlayerView extends VBox {
 
         Button forwardBtn = new Button("+10s ⏩");
         forwardBtn.getStyleClass().add("video-ctrl-btn");
-        forwardBtn.setOnAction(e -> mediaPlayer.controls().skipTime(10000));
+        forwardBtn.setOnAction(e -> seekBy(10000));
 
         Region spacer1 = new Region();
         Region spacer2 = new Region();
@@ -113,10 +130,22 @@ public class VideoPlayerView extends VBox {
         HBox timeRow = new HBox(timeLabel);
         timeRow.setAlignment(Pos.CENTER_RIGHT);
 
-        getChildren().addAll(videoImageView, timeline, controls, timeRow);
+        getChildren().addAll(videoStack, timeline, controls, timeRow);
 
         // Start playback directly across NGINX docker network (No bypasses!)
         mediaPlayer.media().play(videoUrl);
+    }
+
+    private void seekBy(long deltaMs) {
+        boolean wasPaused = !mediaPlayer.status().isPlaying();
+        mediaPlayer.controls().skipTime(deltaMs);
+        if (wasPaused) {
+            mediaPlayer.controls().play();
+            new Thread(() -> {
+                try { Thread.sleep(80); } catch (InterruptedException ex) { Thread.currentThread().interrupt(); }
+                mediaPlayer.controls().pause();
+            }).start();
+        }
     }
 
     private String formatDuration(long millis) {
