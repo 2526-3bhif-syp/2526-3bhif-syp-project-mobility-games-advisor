@@ -21,6 +21,8 @@ import javafx.scene.layout.VBox;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+import javafx.geometry.Rectangle2D;
+import javafx.stage.Screen;
 
 import at.htl.mobilitygamesadvisor.model.Exercise;
 import javafx.scene.media.Media;
@@ -517,19 +519,7 @@ public class Controller implements ExerciseView {
             }
         });
 
-        HBox headerRow = new HBox(12, titleLabel, categoryBadge, collectionBtn);
-        headerRow.setAlignment(Pos.CENTER_LEFT);
-        headerRow.setPadding(new Insets(12, 40, 8, 40));
-
-        Separator sep1 = new Separator();
-        sep1.setPadding(new Insets(0, 40, 0, 40));
-
         // —— Kategorie zuweisen ———————————————————————————————————————————————
-        Label catSectionTitle = new Label("Kategorie zuweisen");
-        catSectionTitle.getStyleClass().add("detail-section-title");
-        HBox catTitleRow = new HBox(catSectionTitle);
-        catTitleRow.setPadding(new Insets(20, 40, 6, 40));
-
         ComboBox<String> categoryCombo = new ComboBox<>();
         categoryCombo.getItems().addAll(categoryRepo.getAll());
         categoryCombo.setValue(e.category());
@@ -539,10 +529,9 @@ public class Controller implements ExerciseView {
                         "-fx-border-color: #d8e4e0;" +
                         "-fx-border-radius: 6px;" +
                         "-fx-background-radius: 6px;" +
-                        "-fx-pref-width: 240px;"
+                        "-fx-pref-width: 180px;"
         );
 
-        // Feedback-Label (wird nach dem Speichern kurz angezeigt)
         Label savedLabel = new Label("✔ Gespeichert");
         savedLabel.setStyle("-fx-text-fill: #2d7a5c;-fx-font-size: 13px;");
         savedLabel.setVisible(false);
@@ -552,10 +541,8 @@ public class Controller implements ExerciseView {
             String selected = categoryCombo.getValue();
             if (selected != null && !selected.isBlank()) {
                 exerciseRepo.updateCategory(e.title(), selected);
-                // Badge im Header aktualisieren
                 categoryBadge.setText(selected);
                 savedLabel.setVisible(true);
-                // Feedback nach 2 Sekunden ausblenden
                 new Thread(() -> {
                     try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
                     javafx.application.Platform.runLater(() -> savedLabel.setVisible(false));
@@ -563,46 +550,38 @@ public class Controller implements ExerciseView {
             }
         });
 
-        HBox assignRow = new HBox(12, categoryCombo, assignBtn, savedLabel);
-        assignRow.setAlignment(Pos.CENTER_LEFT);
-        assignRow.setPadding(new Insets(0, 40, 0, 40));
+        // —— Zeile 1: Kategorie · Titel · Sammelmappe · Zuweisen ——————————————
+        HBox.setHgrow(titleLabel, Priority.ALWAYS);
+        HBox infoRow = new HBox(12,
+                categoryBadge, titleLabel, collectionBtn, categoryCombo, assignBtn, savedLabel);
+        infoRow.setAlignment(Pos.CENTER_LEFT);
+        infoRow.setPadding(new Insets(16, 40, 12, 40));
 
-        Separator sep2 = new Separator();
-        sep2.setPadding(new Insets(16, 40, 0, 40));
-
-        // —— Beschreibung —————————————————————————————————————————————————————
-        Label descSectionTitle = new Label("Beschreibung");
-        descSectionTitle.getStyleClass().add("detail-section-title");
-        HBox descTitleRow = new HBox(descSectionTitle);
-        descTitleRow.setPadding(new Insets(16, 40, 6, 40));
-
+        // —— Zeile 2: Beschreibung ————————————————————————————————————————————
         String descText = (e.desc() != null && !e.desc().isBlank())
                 ? e.desc() : "Keine Beschreibung vorhanden.";
         Label descContent = new Label(descText);
         descContent.getStyleClass().add("detail-description");
         descContent.setWrapText(true);
         HBox.setHgrow(descContent, Priority.ALWAYS);
-        HBox descContentRow = new HBox(descContent);
-        descContentRow.setPadding(new Insets(10, 40, 0, 40));
+        HBox descRow = new HBox(descContent);
+        descRow.setPadding(new Insets(0, 40, 28, 40));
 
-        // —— Video ————————————————————————————————————————————————————————————
-        Label videoSectionTitle = new Label("Video");
-        videoSectionTitle.getStyleClass().add("detail-section-title");
-        HBox videoTitleRow = new HBox(videoSectionTitle);
-        videoTitleRow.setPadding(new Insets(10, 40, 8, 40));
-
-        currentPlayer = new VideoPlayerView(e.videoUrl(), 550);
+        // —— Video (oben, YouTube-Style) ——————————————————————————————————————
+        // Fit video to available screen space minus sidebar (~250px) and UI chrome (~280px)
+        Rectangle2D screen = Screen.getPrimary().getVisualBounds();
+        double videoFitW = screen.getWidth() - 310;
+        double videoFitH = screen.getHeight() - 280;
+        currentPlayer = new VideoPlayerView(e.videoUrl(), videoFitW, videoFitH);
         HBox videoWrapper = new HBox(currentPlayer);
         videoWrapper.setAlignment(Pos.CENTER);
         videoWrapper.setMaxWidth(Double.MAX_VALUE);
-        videoWrapper.setPadding(new Insets(0, 40, 32, 40));
+        videoWrapper.setPadding(new Insets(16, 0, 0, 0));
 
         // —— Zusammenbauen ————————————————————————————————————————————————————
         VBox innerLayout = new VBox(0,
-                backRow, headerRow, sep1,
-                catTitleRow, assignRow, sep2,
-                descTitleRow, descContentRow,
-                videoTitleRow, videoWrapper
+                backRow, videoWrapper,
+                infoRow, descRow
         );
         // innerLayout background:
         innerLayout.setStyle("-fx-background-color: #f4f6f5;");

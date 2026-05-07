@@ -10,9 +10,9 @@ import javafx.scene.control.ProgressIndicator;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.shape.Rectangle;
 
 import uk.co.caprica.vlcj.factory.MediaPlayerFactory;
 import uk.co.caprica.vlcj.player.base.MediaPlayer;
@@ -25,11 +25,11 @@ public class VideoPlayerView extends VBox {
     private EmbeddedMediaPlayer mediaPlayer;
 
     public VideoPlayerView(String videoUrl) {
-        this(videoUrl, 640);
+        this(videoUrl, 640, 480);
     }
 
-    public VideoPlayerView(String videoUrl, double width) {
-        setSpacing(12);
+    public VideoPlayerView(String videoUrl, double fitWidth, double fitHeight) {
+        setSpacing(0);
         setPadding(new Insets(0));
 
         if (videoUrl == null || videoUrl.isBlank()) {
@@ -43,20 +43,61 @@ public class VideoPlayerView extends VBox {
         mediaPlayerFactory = new MediaPlayerFactory("--avcodec-hw=none", "--demux=avformat", "--avcodec-threads=1");
         mediaPlayer = mediaPlayerFactory.mediaPlayers().newEmbeddedMediaPlayer();
 
-        // Use ImageView to display VLC frames in JavaFX
         ImageView videoImageView = new ImageView();
-        videoImageView.setFitWidth(width);
+        videoImageView.setFitWidth(fitWidth);
+        videoImageView.setFitHeight(fitHeight);
         videoImageView.setPreserveRatio(true);
         mediaPlayer.videoSurface().set(new ImageViewVideoSurface(videoImageView));
 
         ProgressIndicator loadingSpinner = new ProgressIndicator();
         loadingSpinner.setMaxSize(60, 60);
-        StackPane videoStack = new StackPane(videoImageView, loadingSpinner);
 
-        // ── Timeline Slider ─────────────────────────────────────────────────
+        // ── Hover overlay: -10s (bottom-left) and +10s (bottom-right) ───────
+        Button rewindBtn = new Button("⏪  -10s");
+        rewindBtn.getStyleClass().add("video-hover-btn");
+        rewindBtn.setVisible(false);
+        rewindBtn.setOnAction(ev -> seekBy(-10000));
+
+        Button forwardBtn = new Button("+10s  ⏩");
+        forwardBtn.getStyleClass().add("video-hover-btn");
+        forwardBtn.setVisible(false);
+        forwardBtn.setOnAction(ev -> seekBy(10000));
+
+        StackPane.setAlignment(rewindBtn, Pos.BOTTOM_LEFT);
+        StackPane.setAlignment(forwardBtn, Pos.BOTTOM_RIGHT);
+        StackPane.setMargin(rewindBtn, new Insets(0, 0, 14, 14));
+        StackPane.setMargin(forwardBtn, new Insets(0, 14, 14, 0));
+
+        // ── Video area with rounded corners ──────────────────────────────────
+        StackPane videoArea = new StackPane(videoImageView, loadingSpinner, rewindBtn, forwardBtn);
+
+        // Bind clip directly to the videoArea's actual rendered size → true rounded corners
+        Rectangle clip = new Rectangle();
+        clip.setArcWidth(18);
+        clip.setArcHeight(18);
+        clip.widthProperty().bind(videoArea.widthProperty());
+        clip.heightProperty().bind(videoArea.heightProperty());
+        videoArea.setClip(clip);
+
+        // Click on video = play/pause (buttons consume their own click, won't bubble here)
+        videoArea.setOnMouseClicked(ev -> {
+            if (mediaPlayer.status().isPlaying()) {
+                mediaPlayer.controls().pause();
+            } else {
+                mediaPlayer.controls().play();
+            }
+        });
+
+        // Show/hide hover buttons via hoverProperty (stays true while cursor is over any child)
+        videoArea.hoverProperty().addListener((obs, wasHovering, isHovering) -> {
+            rewindBtn.setVisible(isHovering);
+            forwardBtn.setVisible(isHovering);
+        });
+
+        // ── Timeline Slider ──────────────────────────────────────────────────
         Slider timeline = new Slider(0, 1, 0);
-        timeline.setMaxWidth(Double.MAX_VALUE);
         timeline.getStyleClass().add("video-slider");
+        HBox.setHgrow(timeline, Priority.ALWAYS);
 
         Label timeLabel = new Label("0:00 / 0:00");
         timeLabel.getStyleClass().add("video-time-label");
@@ -97,42 +138,13 @@ public class VideoPlayerView extends VBox {
             }
         });
 
-        // ── Control Buttons ──────────────────────────────────────────────────
-        Button rewindBtn = new Button("⏪ -10s");
-        rewindBtn.getStyleClass().add("video-ctrl-btn");
-        rewindBtn.setOnAction(e -> seekBy(-10000));
+        // ── Controls row: slider + time label directly below video ───────────
+        HBox controlsRow = new HBox(10, timeline, timeLabel);
+        controlsRow.setAlignment(Pos.CENTER_LEFT);
+        controlsRow.setPadding(new Insets(8, 4, 4, 4));
 
-        Button playPauseBtn = new Button("⏸ Pause");
-        playPauseBtn.getStyleClass().add("video-ctrl-btn-primary");
-        playPauseBtn.setOnAction(e -> {
-            if (mediaPlayer.status().isPlaying()) {
-                mediaPlayer.controls().pause();
-                playPauseBtn.setText("▶ Play");
-            } else {
-                mediaPlayer.controls().play();
-                playPauseBtn.setText("⏸ Pause");
-            }
-        });
+        getChildren().addAll(videoArea, controlsRow);
 
-        Button forwardBtn = new Button("+10s ⏩");
-        forwardBtn.getStyleClass().add("video-ctrl-btn");
-        forwardBtn.setOnAction(e -> seekBy(10000));
-
-        Region spacer1 = new Region();
-        Region spacer2 = new Region();
-        HBox.setHgrow(spacer1, Priority.ALWAYS);
-        HBox.setHgrow(spacer2, Priority.ALWAYS);
-
-        HBox controls = new HBox(10, rewindBtn, spacer1, playPauseBtn, spacer2, forwardBtn);
-        controls.setAlignment(Pos.CENTER);
-        controls.getStyleClass().add("video-controls");
-
-        HBox timeRow = new HBox(timeLabel);
-        timeRow.setAlignment(Pos.CENTER_RIGHT);
-
-        getChildren().addAll(videoStack, timeline, controls, timeRow);
-
-        // Start playback directly across NGINX docker network (No bypasses!)
         mediaPlayer.media().play(videoUrl);
     }
 
