@@ -2,13 +2,17 @@ package at.htl.mobilitygamesadvisor.view;
 
 import at.htl.mobilitygamesadvisor.model.CategoryRepository;
 import at.htl.mobilitygamesadvisor.model.ExerciseRepository;
+import at.htl.mobilitygamesadvisor.model.Sammlung;
+import at.htl.mobilitygamesadvisor.model.SammlungRepository;
 import at.htl.mobilitygamesadvisor.presenter.ExercisePresenter;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Separator;
 import javafx.scene.control.TextField;
@@ -18,10 +22,10 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import javafx.geometry.Rectangle2D;
+import javafx.geometry.Side;
 import javafx.stage.Screen;
 
 import at.htl.mobilitygamesadvisor.model.Exercise;
@@ -50,7 +54,8 @@ public class Controller implements ExerciseView {
 
     private final CategoryRepository categoryRepo   = new CategoryRepository();
     private final ExerciseRepository  exerciseRepo  = new ExerciseRepository();
-    private final List<Exercise>      collection    = new ArrayList<>();
+    private final SammlungRepository  sammlungRepo  = new SammlungRepository();
+    private Integer openSammlungId = null;
 
     // —— MVP wiring ————————————————————————————————————————————————————————————
 
@@ -229,46 +234,50 @@ public class Controller implements ExerciseView {
     // —— Sammelmappe-Pane bauen ———————————————————————————————————————————————
 
     private void buildCollectionPane() {
+        if (openSammlungId == null) {
+            buildSammlungListPane();
+        } else {
+            buildSammlungDetailPane(openSammlungId);
+        }
+    }
+
+    private void buildSammlungListPane() {
         paneCollection.getChildren().clear();
         paneCollection.setSpacing(20);
         paneCollection.setPadding(new Insets(30, 40, 30, 40));
 
-        Label header = new Label("Sammelmappe / Tagesplan");
+        Label header = new Label("Sammelmappen");
         header.getStyleClass().add("header-text");
-
-        Label subtitle = new Label("Übungen für die heutige Sitzung");
+        Label subtitle = new Label("Erstelle und verwalte Übungssammlungen.");
         subtitle.getStyleClass().add("header-subtitle");
-
         Separator sep = new Separator();
 
-        if (collection.isEmpty()) {
-            Label empty = new Label("Deine Sammelmappe ist noch leer. Füge Übungen über die Übersicht hinzu.");
-            empty.getStyleClass().add("card-description");
-            empty.setWrapText(true);
-
-            Button goToExercises = buildActionBtn("→ Zu den Übungen");
-            goToExercises.setOnAction(ev -> showExercises());
-
-            paneCollection.getChildren().addAll(header, subtitle, sep, empty, goToExercises);
-            return;
-        }
-
-        Label countLabel = new Label(collection.size() + " Übung" + (collection.size() == 1 ? "" : "en") + " in der Sammelmappe");
-        countLabel.getStyleClass().add("card-description");
-
-        Button clearBtn = buildDeleteBtn("🗑 Sammelmappe leeren");
-        clearBtn.setOnAction(ev -> {
-            collection.clear();
-            buildCollectionPane();
-            showExercises(exerciseRepo.search(searchField.getText()));
+        TextField titleField = new TextField();
+        titleField.setPromptText("Titel der neuen Sammelmappe...");
+        titleField.getStyleClass().add("search-field");
+        titleField.setPrefWidth(310);
+        Button createBtn = buildActionBtn("+ Erstellen");
+        createBtn.setOnAction(ev -> {
+            String t = titleField.getText().trim();
+            if (!t.isBlank()) {
+                sammlungRepo.create(t);
+                titleField.clear();
+                buildCollectionPane();
+            }
         });
+        HBox createRow = new HBox(12, titleField, createBtn);
+        createRow.setAlignment(Pos.CENTER_LEFT);
 
-        HBox topRow = new HBox(12, countLabel, clearBtn);
-        topRow.setAlignment(Pos.CENTER_LEFT);
-
+        List<Sammlung> sammlungen = sammlungRepo.getAll();
         VBox list = new VBox(10);
-        for (Exercise e : collection) {
-            list.getChildren().add(buildCollectionRow(e));
+        if (sammlungen.isEmpty()) {
+            Label empty = new Label("Noch keine Sammelmappen vorhanden. Erstelle eine oben.");
+            empty.getStyleClass().add("card-description");
+            list.getChildren().add(empty);
+        } else {
+            for (Sammlung s : sammlungen) {
+                list.getChildren().add(buildSammlungRow(s));
+            }
         }
 
         ScrollPane scroll = new ScrollPane(list);
@@ -277,13 +286,159 @@ public class Controller implements ExerciseView {
         scroll.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
         VBox.setVgrow(scroll, Priority.ALWAYS);
 
-        paneCollection.getChildren().addAll(header, subtitle, sep, topRow, scroll);
+        paneCollection.getChildren().addAll(header, subtitle, sep, createRow, scroll);
     }
 
-    private HBox buildCollectionRow(Exercise e) {
+    private HBox buildSammlungRow(Sammlung s) {
+        int count = sammlungRepo.countExercises(s.id());
+
+        Label titleLabel = new Label(s.title());
+        titleLabel.getStyleClass().add("card-title");
+        HBox.setHgrow(titleLabel, Priority.ALWAYS);
+
+        TextField renameField = new TextField(s.title());
+        renameField.getStyleClass().add("search-field");
+        renameField.setPrefWidth(220);
+        renameField.setVisible(false);
+        renameField.setManaged(false);
+        HBox.setHgrow(renameField, Priority.ALWAYS);
+
+        Label countLabel = new Label(count + " Übung" + (count == 1 ? "" : "en"));
+        countLabel.getStyleClass().add("card-tag");
+
+        Button openBtn    = buildActionBtn("▶ Öffnen");
+        Button renameBtn  = buildSecondaryBtn("✏ Umbenennen");
+        Button saveBtn    = buildActionBtn("✔ Speichern");
+        Button cancelBtn  = buildSecondaryBtn("✖ Abbrechen");
+        Button deleteBtn  = buildDeleteBtn("🗑 Löschen");
+        Button confirmBtn = buildDeleteBtn("⚠ Bestätigen");
+        Button abortBtn   = buildSecondaryBtn("Abbrechen");
+
+        saveBtn.setVisible(false);    saveBtn.setManaged(false);
+        cancelBtn.setVisible(false);  cancelBtn.setManaged(false);
+        confirmBtn.setVisible(false); confirmBtn.setManaged(false);
+        abortBtn.setVisible(false);   abortBtn.setManaged(false);
+
+        openBtn.setOnAction(ev -> { openSammlungId = s.id(); buildCollectionPane(); });
+
+        renameBtn.setOnAction(ev -> {
+            titleLabel.setVisible(false);  titleLabel.setManaged(false);
+            renameField.setVisible(true);  renameField.setManaged(true);
+            openBtn.setVisible(false);     openBtn.setManaged(false);
+            renameBtn.setVisible(false);   renameBtn.setManaged(false);
+            deleteBtn.setVisible(false);   deleteBtn.setManaged(false);
+            saveBtn.setVisible(true);      saveBtn.setManaged(true);
+            cancelBtn.setVisible(true);    cancelBtn.setManaged(true);
+            renameField.requestFocus();
+            renameField.selectAll();
+        });
+
+        saveBtn.setOnAction(ev -> {
+            String newTitle = renameField.getText().trim();
+            if (!newTitle.isBlank() && !newTitle.equals(s.title())) {
+                sammlungRepo.rename(s.id(), newTitle);
+                buildCollectionPane();
+            } else {
+                cancelBtn.fire();
+            }
+        });
+
+        cancelBtn.setOnAction(ev -> {
+            renameField.setText(s.title());
+            renameField.setVisible(false);  renameField.setManaged(false);
+            titleLabel.setVisible(true);    titleLabel.setManaged(true);
+            saveBtn.setVisible(false);      saveBtn.setManaged(false);
+            cancelBtn.setVisible(false);    cancelBtn.setManaged(false);
+            openBtn.setVisible(true);       openBtn.setManaged(true);
+            renameBtn.setVisible(true);     renameBtn.setManaged(true);
+            deleteBtn.setVisible(true);     deleteBtn.setManaged(true);
+        });
+
+        deleteBtn.setOnAction(ev -> {
+            deleteBtn.setVisible(false);   deleteBtn.setManaged(false);
+            openBtn.setVisible(false);     openBtn.setManaged(false);
+            renameBtn.setVisible(false);   renameBtn.setManaged(false);
+            confirmBtn.setVisible(true);   confirmBtn.setManaged(true);
+            abortBtn.setVisible(true);     abortBtn.setManaged(true);
+        });
+        confirmBtn.setOnAction(ev -> { sammlungRepo.delete(s.id()); buildCollectionPane(); });
+        abortBtn.setOnAction(ev -> {
+            confirmBtn.setVisible(false);  confirmBtn.setManaged(false);
+            abortBtn.setVisible(false);    abortBtn.setManaged(false);
+            deleteBtn.setVisible(true);    deleteBtn.setManaged(true);
+            openBtn.setVisible(true);      openBtn.setManaged(true);
+            renameBtn.setVisible(true);    renameBtn.setManaged(true);
+        });
+
+        HBox row = new HBox(12, titleLabel, renameField, countLabel,
+                openBtn, renameBtn, saveBtn, cancelBtn, deleteBtn, confirmBtn, abortBtn);
+        row.setAlignment(Pos.CENTER_LEFT);
+        row.setPadding(new Insets(10, 16, 10, 16));
+        row.setStyle("-fx-background-color: #ffffff; -fx-background-radius: 8px;" +
+                "-fx-border-color: #e0ece8; -fx-border-radius: 8px; -fx-border-width: 1;");
+        return row;
+    }
+
+    private void buildSammlungDetailPane(int sammlungId) {
+        List<Sammlung> all = sammlungRepo.getAll();
+        Sammlung s = all.stream().filter(x -> x.id() == sammlungId).findFirst().orElse(null);
+        if (s == null) { openSammlungId = null; buildCollectionPane(); return; }
+
+        paneCollection.getChildren().clear();
+        paneCollection.setSpacing(20);
+        paneCollection.setPadding(new Insets(30, 40, 30, 40));
+
+        Button backBtn = buildSecondaryBtn("← Alle Sammelmappen");
+        backBtn.setOnAction(ev -> { openSammlungId = null; buildCollectionPane(); });
+
+        Label header = new Label(s.title());
+        header.getStyleClass().add("header-text");
+        Separator sep = new Separator();
+
+        List<Exercise> exercises = sammlungRepo.getExercises(sammlungId);
+
+        if (exercises.isEmpty()) {
+            Label empty = new Label("Diese Sammelmappe ist leer. Füge Übungen über die Übersicht hinzu.");
+            empty.getStyleClass().add("card-description");
+            empty.setWrapText(true);
+            Button goBtn = buildActionBtn("→ Zu den Übungen");
+            goBtn.setOnAction(ev -> showExercises());
+            paneCollection.getChildren().addAll(backBtn, header, sep, empty, goBtn);
+            return;
+        }
+
+        Label countLabel = new Label(exercises.size() + " Übung" + (exercises.size() == 1 ? "" : "en"));
+        countLabel.getStyleClass().add("card-description");
+
+        Button clearBtn = buildDeleteBtn("🗑 Sammelmappe leeren");
+        clearBtn.setOnAction(ev -> {
+            for (Exercise e : exercises) sammlungRepo.removeExercise(sammlungId, e.id());
+            buildCollectionPane();
+            showExercises(exerciseRepo.search(searchField.getText()));
+        });
+
+        HBox topRow = new HBox(12, countLabel, clearBtn);
+        topRow.setAlignment(Pos.CENTER_LEFT);
+
+        VBox list = new VBox(10);
+        for (Exercise e : exercises) {
+            list.getChildren().add(buildCollectionRow(e, sammlungId));
+        }
+
+        ScrollPane scroll = new ScrollPane(list);
+        scroll.setFitToWidth(true);
+        scroll.getStyleClass().add("transparent-scroll");
+        scroll.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
+        VBox.setVgrow(scroll, Priority.ALWAYS);
+
+        paneCollection.getChildren().addAll(backBtn, header, sep, topRow, scroll);
+    }
+
+    private HBox buildCollectionRow(Exercise e, int sammlungId) {
         Label titleLabel = new Label(e.title());
         titleLabel.getStyleClass().add("card-title");
         titleLabel.setMinWidth(200);
+        HBox.setHgrow(titleLabel, Priority.ALWAYS);
 
         Label tagLabel = new Label(e.category());
         tagLabel.getStyleClass().add("card-tag");
@@ -293,7 +448,7 @@ public class Controller implements ExerciseView {
 
         Button removeBtn = buildDeleteBtn("✖ Entfernen");
         removeBtn.setOnAction(ev -> {
-            collection.remove(e);
+            sammlungRepo.removeExercise(sammlungId, e.id());
             buildCollectionPane();
             showExercises(exerciseRepo.search(searchField.getText()));
         });
@@ -363,7 +518,7 @@ public class Controller implements ExerciseView {
     @FXML private void showExercises()  { switchPage(paneExercises,  btnExercises);  }
     @FXML private void showCategories() { buildCategoryPane(); switchPage(paneCategories, btnCategories); }
     @FXML private void showTracking()   { switchPage(paneTracking,   btnTracking);   }
-    @FXML private void showCollection() { buildCollectionPane(); switchPage(paneCollection, btnCollection); }
+    @FXML private void showCollection() { openSammlungId = null; buildCollectionPane(); switchPage(paneCollection, btnCollection); }
 
     private void switchPage(VBox activePane, Button activeButton) {
         hideDetailPane();
@@ -444,20 +599,24 @@ public class Controller implements ExerciseView {
         String cardBtnAdded = "-fx-background-color: #e8f4ef;-fx-text-fill: #2d7a5c;" +
                 "-fx-font-size: 11px;-fx-cursor: hand;-fx-padding: 4 8 4 8;" +
                 "-fx-border-color: #5cad8a;-fx-border-radius: 6px;-fx-border-width: 1;";
-        boolean cardInitAdded = collection.stream().anyMatch(ex -> ex.title().equals(e.title()));
-        Button addBtn = new Button(cardInitAdded ? "✔ Entfernen" : "+ Sammelmappe");
+        boolean cardInitAdded = sammlungRepo.isInAnySammlung(e.id());
+        Button addBtn = new Button(cardInitAdded ? "✔ Sammelmappe" : "+ Sammelmappe");
         addBtn.setStyle(cardInitAdded ? cardBtnAdded : cardBtnNormal);
         addBtn.setOnAction(ev -> {
-            boolean inCollection = collection.stream().anyMatch(ex -> ex.title().equals(e.title()));
-            if (inCollection) {
-                collection.removeIf(ex -> ex.title().equals(e.title()));
-                addBtn.setText("+ Sammelmappe");
-                addBtn.setStyle(cardBtnNormal);
-            } else {
-                collection.add(e);
-                addBtn.setText("✔ Entfernen");
-                addBtn.setStyle(cardBtnAdded);
+            List<Sammlung> sammlungen = sammlungRepo.getAll();
+            if (sammlungen.isEmpty()) return;
+            ContextMenu menu = new ContextMenu();
+            for (Sammlung s : sammlungen) {
+                boolean inThis = sammlungRepo.containsExercise(s.id(), e.id());
+                MenuItem item = new MenuItem((inThis ? "✔ " : "+ ") + s.title());
+                item.setOnAction(mev -> {
+                    if (inThis) sammlungRepo.removeExercise(s.id(), e.id());
+                    else        sammlungRepo.addExercise(s.id(), e.id());
+                    showExercises(exerciseRepo.search(searchField.getText()));
+                });
+                menu.getItems().add(item);
             }
+            menu.show(addBtn, Side.BOTTOM, 0, 0);
         });
 
         content.getChildren().addAll(titleLabel, descLabel, tagLabel, addBtn);
@@ -500,23 +659,24 @@ public class Controller implements ExerciseView {
         Label categoryBadge = new Label(e.category());
         categoryBadge.getStyleClass().add("card-tag");
 
-        String detailBtnAdded = "-fx-background-color: #5cad8a;-fx-text-fill: #ffffff;" +
-                "-fx-font-size: 13px;-fx-padding: 10 20 10 20;" +
-                "-fx-background-radius: 10;-fx-cursor: hand;";
-        boolean detailInitAdded = collection.stream().anyMatch(ex -> ex.title().equals(e.title()));
-        Button collectionBtn = buildActionBtn(detailInitAdded ? "✔ Entfernen" : "+ Zur Sammelmappe");
-        if (detailInitAdded) collectionBtn.setStyle(detailBtnAdded);
+        boolean detailInitAdded = sammlungRepo.isInAnySammlung(e.id());
+        Button collectionBtn = buildActionBtn(detailInitAdded ? "✔ Sammelmappe" : "+ Zur Sammelmappe");
         collectionBtn.setOnAction(ev -> {
-            boolean inCollection = collection.stream().anyMatch(ex -> ex.title().equals(e.title()));
-            if (inCollection) {
-                collection.removeIf(ex -> ex.title().equals(e.title()));
-                collectionBtn.setText("+ Zur Sammelmappe");
-                collectionBtn.setStyle("");
-            } else {
-                collection.add(e);
-                collectionBtn.setText("✔ Entfernen");
-                collectionBtn.setStyle(detailBtnAdded);
+            List<Sammlung> sammlungen = sammlungRepo.getAll();
+            if (sammlungen.isEmpty()) return;
+            ContextMenu menu = new ContextMenu();
+            for (Sammlung s : sammlungen) {
+                boolean inThis = sammlungRepo.containsExercise(s.id(), e.id());
+                MenuItem item = new MenuItem((inThis ? "✔ " : "+ ") + s.title());
+                item.setOnAction(mev -> {
+                    if (inThis) sammlungRepo.removeExercise(s.id(), e.id());
+                    else        sammlungRepo.addExercise(s.id(), e.id());
+                    boolean nowInAny = sammlungRepo.isInAnySammlung(e.id());
+                    collectionBtn.setText(nowInAny ? "✔ Sammelmappe" : "+ Zur Sammelmappe");
+                });
+                menu.getItems().add(item);
             }
+            menu.show(collectionBtn, Side.BOTTOM, 0, 0);
         });
 
         // —— Kategorie zuweisen ———————————————————————————————————————————————

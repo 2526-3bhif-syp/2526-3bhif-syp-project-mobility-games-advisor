@@ -4,12 +4,12 @@ import java.util.ArrayList;
 import java.util.List;
 public class ExerciseRepository {
     public List<Exercise> getAll() {
-        return query("SELECT title, description, category,video_url FROM exercises");
+        return query("SELECT id, title, description, category, video_url FROM exercises");
     }
     public List<Exercise> search(String query) {
         if (query == null || query.isBlank()) return getAll();
         String sql = """
-        SELECT title, description, category, video_url FROM exercises
+        SELECT id, title, description, category, video_url FROM exercises
         WHERE LOWER(title) LIKE ? OR LOWER(category) LIKE ?
         """;
         String pattern = "%" + query.toLowerCase() + "%";
@@ -48,6 +48,7 @@ public class ExerciseRepository {
         List<Exercise> list = new ArrayList<>();
         while (rs.next()) {
             list.add(new Exercise(
+                    rs.getInt("id"),
                     rs.getString("title"),
                     rs.getString("description"),
                     rs.getString("category"),

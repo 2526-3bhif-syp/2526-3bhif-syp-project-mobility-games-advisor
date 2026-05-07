@@ -377,3 +377,34 @@
 .video-slider:hover .thumb {
     -fx-background-color: #38926e;
 }
+
+/* ── ContextMenu ───────────────────────────────────────── */
+.context-menu {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #d8e4e0;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-effect: dropshadow(gaussian, #1a2e2a22, 12, 0, 0, 3);
+}
+
+.context-menu .menu-item {
+    -fx-background-color: transparent;
+    -fx-padding: 8 16 8 16;
+}
+
+.context-menu .menu-item .label {
+    -fx-text-fill: #1a2e2a;
+    -fx-font-size: 13px;
+}
+
+.context-menu .menu-item:focused,
+.context-menu .menu-item:hover {
+    -fx-background-color: #e8f4ef;
+    -fx-background-radius: 6;
+}
+
+.context-menu .menu-item:focused .label,
+.context-menu .menu-item:hover .label {
+    -fx-text-fill: #2d7a5c;
+}
