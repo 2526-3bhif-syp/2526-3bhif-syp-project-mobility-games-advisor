@@ -19,6 +19,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 
@@ -421,8 +422,8 @@ public class Controller implements ExerciseView {
         topRow.setAlignment(Pos.CENTER_LEFT);
 
         VBox list = new VBox(10);
-        for (Exercise e : exercises) {
-            list.getChildren().add(buildCollectionRow(e, sammlungId));
+        for (int i = 0; i < exercises.size(); i++) {
+            list.getChildren().add(buildCollectionRow(exercises.get(i), sammlungId, exercises, i));
         }
 
         ScrollPane scroll = new ScrollPane(list);
@@ -434,7 +435,7 @@ public class Controller implements ExerciseView {
         paneCollection.getChildren().addAll(backBtn, header, sep, topRow, scroll);
     }
 
-    private HBox buildCollectionRow(Exercise e, int sammlungId) {
+    private HBox buildCollectionRow(Exercise e, int sammlungId, List<Exercise> allExercises, int index) {
         Label titleLabel = new Label(e.title());
         titleLabel.getStyleClass().add("card-title");
         titleLabel.setMinWidth(200);
@@ -444,7 +445,7 @@ public class Controller implements ExerciseView {
         tagLabel.getStyleClass().add("card-tag");
 
         Button openBtn = buildSecondaryBtn("▶ Abspielen");
-        openBtn.setOnAction(ev -> openDetailInPane(e, paneCollection, btnCollection));
+        openBtn.setOnAction(ev -> openDetailInPane(e, paneCollection, btnCollection, allExercises, index));
 
         Button removeBtn = buildDeleteBtn("✖ Entfernen");
         removeBtn.setOnAction(ev -> {
@@ -483,6 +484,20 @@ public class Controller implements ExerciseView {
         btn.setOnMouseExited(ev  -> btn.setStyle(normal));
         return btn;
     }
+    private Button buildArrowOverlayBtn(String arrow) {
+        String base  = "-fx-background-color: rgba(0,0,0,0.45);-fx-text-fill: white;" +
+                "-fx-font-size: 18px;-fx-cursor: hand;-fx-background-radius: 6px;" +
+                "-fx-padding: 8 12 8 12;-fx-border-width: 0;";
+        String hover = "-fx-background-color: rgba(0,0,0,0.68);-fx-text-fill: white;" +
+                "-fx-font-size: 18px;-fx-cursor: hand;-fx-background-radius: 6px;" +
+                "-fx-padding: 8 12 8 12;-fx-border-width: 0;";
+        Button btn = new Button(arrow);
+        btn.setStyle(base);
+        btn.setOnMouseEntered(ev -> btn.setStyle(hover));
+        btn.setOnMouseExited(ev  -> btn.setStyle(base));
+        return btn;
+    }
+
     private Button buildSecondaryBtn(String text) {
         String normal = "-fx-background-color: transparent;" +
                 "-fx-text-fill: #2d7a5c;-fx-font-size: 13px;-fx-cursor: hand;" +
@@ -626,6 +641,11 @@ public class Controller implements ExerciseView {
     // —— Detail in gleichem Fenster öffnen ————————————————————————————————————
 
     private void openDetailInPane(Exercise e, VBox returnPane, Button returnBtn) {
+        openDetailInPane(e, returnPane, returnBtn, null, -1);
+    }
+
+    private void openDetailInPane(Exercise e, VBox returnPane, Button returnBtn,
+                                   List<Exercise> navList, int navIndex) {
         disposeCurrentPlayer();
         paneDetail.getChildren().clear();
 
@@ -654,7 +674,6 @@ public class Controller implements ExerciseView {
         Label titleLabel = new Label(e.title());
         titleLabel.getStyleClass().add("detail-title");
         titleLabel.setWrapText(true);
-        HBox.setHgrow(titleLabel, Priority.ALWAYS);
 
         Label categoryBadge = new Label(e.category());
         categoryBadge.getStyleClass().add("card-tag");
@@ -695,6 +714,7 @@ public class Controller implements ExerciseView {
         Label savedLabel = new Label("✔ Gespeichert");
         savedLabel.setStyle("-fx-text-fill: #2d7a5c;-fx-font-size: 13px;");
         savedLabel.setVisible(false);
+        savedLabel.managedProperty().bind(savedLabel.visibleProperty());
 
         Button assignBtn = buildActionBtn("Zuweisen");
         assignBtn.setOnAction(ev -> {
@@ -710,8 +730,12 @@ public class Controller implements ExerciseView {
             }
         });
 
+        // —— Navigation (nur bei Sammelmappe mit mehreren Videos) ————————————
+        boolean hasNav  = navList != null && navList.size() > 1;
+        boolean hasPrev = hasNav && navIndex > 0;
+        boolean hasNext = hasNav && navIndex < navList.size() - 1;
+
         // —— Zeile 1: Kategorie · Titel · Sammelmappe · Zuweisen ——————————————
-        HBox.setHgrow(titleLabel, Priority.ALWAYS);
         HBox infoRow = new HBox(12,
                 categoryBadge, titleLabel, collectionBtn, categoryCombo, assignBtn, savedLabel);
         infoRow.setAlignment(Pos.CENTER_LEFT);
@@ -728,12 +752,42 @@ public class Controller implements ExerciseView {
         descRow.setPadding(new Insets(0, 40, 28, 40));
 
         // —— Video (oben, YouTube-Style) ——————————————————————————————————————
-        // Fit video to available screen space minus sidebar (~250px) and UI chrome (~280px)
         Rectangle2D screen = Screen.getPrimary().getVisualBounds();
         double videoFitW = screen.getWidth() - 310;
         double videoFitH = screen.getHeight() - 280;
         currentPlayer = new VideoPlayerView(e.videoUrl(), videoFitW, videoFitH);
-        HBox videoWrapper = new HBox(currentPlayer);
+
+        StackPane videoStack = new StackPane(currentPlayer);
+        if (hasNav) {
+            Button[] overlays = new Button[2];
+            if (hasPrev) {
+                Button prevArrow = buildArrowOverlayBtn("❮");
+                prevArrow.setVisible(false);
+                StackPane.setAlignment(prevArrow, Pos.CENTER_LEFT);
+                StackPane.setMargin(prevArrow, new Insets(0, 0, 0, 12));
+                int prevIdx = navIndex - 1;
+                prevArrow.setOnAction(ev -> openDetailInPane(
+                        navList.get(prevIdx), returnPane, returnBtn, navList, prevIdx));
+                videoStack.getChildren().add(prevArrow);
+                overlays[0] = prevArrow;
+            }
+            if (hasNext) {
+                Button nextArrow = buildArrowOverlayBtn("❯");
+                nextArrow.setVisible(false);
+                StackPane.setAlignment(nextArrow, Pos.CENTER_RIGHT);
+                StackPane.setMargin(nextArrow, new Insets(0, 12, 0, 0));
+                int nextIdx = navIndex + 1;
+                nextArrow.setOnAction(ev -> openDetailInPane(
+                        navList.get(nextIdx), returnPane, returnBtn, navList, nextIdx));
+                videoStack.getChildren().add(nextArrow);
+                overlays[1] = nextArrow;
+            }
+            videoStack.hoverProperty().addListener((obs, was, now) -> {
+                for (Button b : overlays) if (b != null) b.setVisible(now);
+            });
+        }
+
+        HBox videoWrapper = new HBox(videoStack);
         videoWrapper.setAlignment(Pos.CENTER);
         videoWrapper.setMaxWidth(Double.MAX_VALUE);
         videoWrapper.setPadding(new Insets(16, 0, 0, 0));
