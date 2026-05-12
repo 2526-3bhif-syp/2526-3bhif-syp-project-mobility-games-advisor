@@ -53,6 +53,10 @@ public class Controller implements ExerciseView {
     private VBox paneDetail;
     private VideoPlayerView currentPlayer;
 
+    // —— NEU: Kategorie-Filter ————————————————————————————————————————————————
+    private ComboBox<String> categoryFilter;
+    private static final String ALL_CATEGORIES = "Alle Kategorien";
+
     private final CategoryRepository categoryRepo   = new CategoryRepository();
     private final ExerciseRepository  exerciseRepo  = new ExerciseRepository();
     private final SammlungRepository  sammlungRepo  = new SammlungRepository();
@@ -64,8 +68,70 @@ public class Controller implements ExerciseView {
     public void initialize() {
         new ExercisePresenter(exerciseRepo, this);
         buildDetailPane();
+        buildCategoryFilterBar();
         buildCategoryPane();
         showExercises();
+    }
+
+    // —— Kategorie-Filterleiste bauen (neben Suchfeld) ————————————————————————
+
+    private void buildCategoryFilterBar() {
+        // Suchfeld-Parent ist eine HBox in der FXML – wir fügen die ComboBox daneben ein
+        HBox searchBar = (HBox) searchField.getParent();
+
+        categoryFilter = new ComboBox<>();
+        categoryFilter.setVisibleRowCount(8); // scrollbar ab 8 Einträgen
+        categoryFilter.getStyleClass().add("search-field");
+        categoryFilter.setPrefWidth(200);
+        categoryFilter.setStyle(
+                "-fx-background-color: #ffffff;" +
+                        "-fx-border-color: #d8e4e0;" +
+                        "-fx-border-radius: 6px;" +
+                        "-fx-background-radius: 6px;"
+        );
+
+        refreshCategoryFilter();
+
+        categoryFilter.valueProperty().addListener((obs, oldVal, newVal) ->
+                applyFilter()
+        );
+
+        Button clearFilterBtn = buildSecondaryBtn("✖ Filter löschen");
+        clearFilterBtn.setOnAction(ev -> {
+            categoryFilter.setValue(ALL_CATEGORIES);
+        });
+
+        searchBar.getChildren().addAll(categoryFilter, clearFilterBtn);
+    }
+
+    /** Kategorien in der ComboBox neu laden (z.B. nach Erstellen einer neuen Kategorie). */
+    private void refreshCategoryFilter() {
+        String current = categoryFilter.getValue();
+        categoryFilter.getItems().clear();
+        categoryFilter.getItems().add(ALL_CATEGORIES);
+        categoryFilter.getItems().addAll(categoryRepo.getAll());
+        // Selektion beibehalten falls noch gültig, sonst zurücksetzen
+        if (current != null && categoryFilter.getItems().contains(current)) {
+            categoryFilter.setValue(current);
+        } else {
+            categoryFilter.setValue(ALL_CATEGORIES);
+        }
+    }
+
+    /** Wendet Suchtext UND Kategoriefilter gemeinsam an. */
+    private void applyFilter() {
+        String query    = searchField.getText();
+        String category = categoryFilter.getValue();
+
+        List<Exercise> results = exerciseRepo.search(query);
+
+        if (category != null && !category.equals(ALL_CATEGORIES)) {
+            results = results.stream()
+                    .filter(e -> category.equals(e.category()))
+                    .toList();
+        }
+
+        showExercises(results);
     }
 
     // —— Detail-Pane bauen ————————————————————————————————————————————————————
@@ -109,6 +175,7 @@ public class Controller implements ExerciseView {
                 categoryRepo.create(name);
                 newCatField.clear();
                 buildCategoryPane();
+                refreshCategoryFilter(); // NEU: Filter-Dropdown aktualisieren
             }
         });
 
@@ -166,7 +233,6 @@ public class Controller implements ExerciseView {
         saveBtn.setVisible(false);   saveBtn.setManaged(false);
         cancelBtn.setVisible(false); cancelBtn.setManaged(false);
 
-        // Löschen-Button mit Bestätigungsschritt
         Button deleteBtn    = buildDeleteBtn("🗑 Löschen");
         Button confirmBtn   = buildDeleteBtn("⚠ Bestätigen");
         Button abortBtn     = buildSecondaryBtn("Abbrechen");
@@ -174,7 +240,6 @@ public class Controller implements ExerciseView {
         abortBtn.setVisible(false);   abortBtn.setManaged(false);
 
         deleteBtn.setOnAction(ev -> {
-            // Umbenennen-Buttons ausblenden, Bestätigung einblenden
             renameBtn.setVisible(false);  renameBtn.setManaged(false);
             deleteBtn.setVisible(false);  deleteBtn.setManaged(false);
             confirmBtn.setVisible(true);  confirmBtn.setManaged(true);
@@ -184,6 +249,7 @@ public class Controller implements ExerciseView {
         confirmBtn.setOnAction(ev -> {
             categoryRepo.delete(categoryName);
             buildCategoryPane();
+            refreshCategoryFilter(); // NEU
         });
 
         abortBtn.setOnAction(ev -> {
@@ -209,6 +275,7 @@ public class Controller implements ExerciseView {
             if (!newName.isBlank() && !newName.equals(categoryName)) {
                 categoryRepo.rename(categoryName, newName);
                 buildCategoryPane();
+                refreshCategoryFilter(); // NEU
             } else {
                 cancelBtn.fire();
             }
@@ -415,7 +482,7 @@ public class Controller implements ExerciseView {
         clearBtn.setOnAction(ev -> {
             for (Exercise e : exercises) sammlungRepo.removeExercise(sammlungId, e.id());
             buildCollectionPane();
-            showExercises(exerciseRepo.search(searchField.getText()));
+            applyFilter(); // NEU: statt showExercises direkt
         });
 
         HBox topRow = new HBox(12, countLabel, clearBtn);
@@ -451,7 +518,7 @@ public class Controller implements ExerciseView {
         removeBtn.setOnAction(ev -> {
             sammlungRepo.removeExercise(sammlungId, e.id());
             buildCollectionPane();
-            showExercises(exerciseRepo.search(searchField.getText()));
+            applyFilter(); // NEU: statt showExercises direkt
         });
 
         HBox row = new HBox(12, titleLabel, tagLabel, openBtn, removeBtn);
@@ -470,7 +537,6 @@ public class Controller implements ExerciseView {
         return btn;
     }
 
-
     private Button buildDeleteBtn(String text) {
         String normal = "-fx-background-color: transparent;" +
                 "-fx-text-fill: #c0392b;-fx-font-size: 13px;-fx-cursor: hand;" +
@@ -484,6 +550,7 @@ public class Controller implements ExerciseView {
         btn.setOnMouseExited(ev  -> btn.setStyle(normal));
         return btn;
     }
+
     private Button buildArrowOverlayBtn(String arrow) {
         String base  = "-fx-background-color: rgba(0,0,0,0.45);-fx-text-fill: white;" +
                 "-fx-font-size: 18px;-fx-cursor: hand;-fx-background-radius: 6px;" +
@@ -511,6 +578,7 @@ public class Controller implements ExerciseView {
         btn.setOnMouseExited(ev  -> btn.setStyle(normal));
         return btn;
     }
+
     // —— ExerciseView implementation ——————————————————————————————————————————
 
     @Override
@@ -523,8 +591,9 @@ public class Controller implements ExerciseView {
     @Override
     public void setOnSearchChanged(Consumer<String> listener) {
         if (searchField != null) {
+            // NEU: Suche geht durch applyFilter, nicht direkt an den Presenter
             searchField.textProperty().addListener(
-                    (obs, oldVal, newVal) -> listener.accept(newVal));
+                    (obs, oldVal, newVal) -> applyFilter());
         }
     }
 
@@ -538,7 +607,7 @@ public class Controller implements ExerciseView {
     private void switchPage(VBox activePane, Button activeButton) {
         hideDetailPane();
         if (activePane == paneExercises) {
-            showExercises(exerciseRepo.search(searchField.getText()));
+            applyFilter(); // NEU: statt showExercises direkt
         }
         List.of(paneExercises, paneCategories, paneTracking, paneCollection)
                 .forEach(p -> p.setVisible(false));
@@ -558,7 +627,6 @@ public class Controller implements ExerciseView {
         VBox card = new VBox();
         card.getStyleClass().add("exercise-card");
 
-        // Thumbnail statt "▶ VIDEO" Text
         StackPane imagePlaceholder = new StackPane();
         imagePlaceholder.getStyleClass().add("card-image-placeholder");
         imagePlaceholder.setPrefHeight(120);
@@ -567,8 +635,6 @@ public class Controller implements ExerciseView {
             try {
                 Media media = new Media(e.videoUrl());
                 MediaPlayer player = new MediaPlayer(media);
-
-                // Erstes Frame laden und dann sofort pausieren
                 player.setAutoPlay(false);
                 player.seek(Duration.ZERO);
                 player.pause();
@@ -578,7 +644,6 @@ public class Controller implements ExerciseView {
                 thumbnail.setFitHeight(120);
                 thumbnail.setPreserveRatio(false);
 
-                // Play-Icon Overlay
                 Label playIcon = new Label("▶");
                 playIcon.setStyle(
                         "-fx-text-fill: white;" +
@@ -627,7 +692,7 @@ public class Controller implements ExerciseView {
                 item.setOnAction(mev -> {
                     if (inThis) sammlungRepo.removeExercise(s.id(), e.id());
                     else        sammlungRepo.addExercise(s.id(), e.id());
-                    showExercises(exerciseRepo.search(searchField.getText()));
+                    applyFilter(); // NEU: statt showExercises direkt
                 });
                 menu.getItems().add(item);
             }
@@ -638,6 +703,7 @@ public class Controller implements ExerciseView {
         card.getChildren().addAll(imagePlaceholder, content);
         exerciseGrid.getChildren().add(card);
     }
+
     // —— Detail in gleichem Fenster öffnen ————————————————————————————————————
 
     private void openDetailInPane(Exercise e, VBox returnPane, Button returnBtn) {
@@ -645,7 +711,7 @@ public class Controller implements ExerciseView {
     }
 
     private void openDetailInPane(Exercise e, VBox returnPane, Button returnBtn,
-                                   List<Exercise> navList, int navIndex) {
+                                  List<Exercise> navList, int navIndex) {
         disposeCurrentPlayer();
         paneDetail.getChildren().clear();
 
@@ -670,7 +736,6 @@ public class Controller implements ExerciseView {
         HBox backRow = new HBox(backBtn);
         backRow.setPadding(new Insets(28, 40, 8, 40));
 
-        // —— Titel + Kategorie-Badge ———————————————————————————————————————————
         Label titleLabel = new Label(e.title());
         titleLabel.getStyleClass().add("detail-title");
         titleLabel.setWrapText(true);
@@ -698,7 +763,6 @@ public class Controller implements ExerciseView {
             menu.show(collectionBtn, Side.BOTTOM, 0, 0);
         });
 
-        // —— Kategorie zuweisen ———————————————————————————————————————————————
         ComboBox<String> categoryCombo = new ComboBox<>();
         categoryCombo.getItems().addAll(categoryRepo.getAll());
         categoryCombo.setValue(e.category());
@@ -730,18 +794,15 @@ public class Controller implements ExerciseView {
             }
         });
 
-        // —— Navigation (nur bei Sammelmappe mit mehreren Videos) ————————————
         boolean hasNav  = navList != null && navList.size() > 1;
         boolean hasPrev = hasNav && navIndex > 0;
         boolean hasNext = hasNav && navIndex < navList.size() - 1;
 
-        // —— Zeile 1: Kategorie · Titel · Sammelmappe · Zuweisen ——————————————
         HBox infoRow = new HBox(12,
                 categoryBadge, titleLabel, collectionBtn, categoryCombo, assignBtn, savedLabel);
         infoRow.setAlignment(Pos.CENTER_LEFT);
         infoRow.setPadding(new Insets(16, 40, 12, 40));
 
-        // —— Zeile 2: Beschreibung ————————————————————————————————————————————
         String descText = (e.desc() != null && !e.desc().isBlank())
                 ? e.desc() : "Keine Beschreibung vorhanden.";
         Label descContent = new Label(descText);
@@ -751,7 +812,6 @@ public class Controller implements ExerciseView {
         HBox descRow = new HBox(descContent);
         descRow.setPadding(new Insets(0, 40, 28, 40));
 
-        // —— Video (oben, YouTube-Style) ——————————————————————————————————————
         Rectangle2D screen = Screen.getPrimary().getVisualBounds();
         double videoFitW = screen.getWidth() - 310;
         double videoFitH = screen.getHeight() - 280;
@@ -792,12 +852,10 @@ public class Controller implements ExerciseView {
         videoWrapper.setMaxWidth(Double.MAX_VALUE);
         videoWrapper.setPadding(new Insets(16, 0, 0, 0));
 
-        // —— Zusammenbauen ————————————————————————————————————————————————————
         VBox innerLayout = new VBox(0,
                 backRow, videoWrapper,
                 infoRow, descRow
         );
-        // innerLayout background:
         innerLayout.setStyle("-fx-background-color: #f4f6f5;");
 
         ScrollPane scroll = new ScrollPane(innerLayout);

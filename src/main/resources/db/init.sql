@@ -20,3 +20,6 @@ CREATE TABLE IF NOT EXISTS sammlung_exercise (
 INSERT INTO exercises (title, description, category, video_url) VALUES
                                                                     ('Gedächtnis-Training', 'Finde passende Bildpaare.',          'Kognition',    'http://localhost:8081/videos/video1.mp4'),
                                                                     ('Sitz-Yoga',           'Einfache Dehnübungen im Sitzen.',    'Mobilität',    'http://localhost:8081/videos/video2.mp4');
+
+
+
