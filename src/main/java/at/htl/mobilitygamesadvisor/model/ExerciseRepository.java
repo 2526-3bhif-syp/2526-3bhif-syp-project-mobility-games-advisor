@@ -2,10 +2,13 @@ package at.htl.mobilitygamesadvisor.model;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+
 public class ExerciseRepository {
+
     public List<Exercise> getAll() {
         return query("SELECT id, title, description, category, video_url FROM exercises");
     }
+
     public List<Exercise> search(String query) {
         if (query == null || query.isBlank()) return getAll();
         String sql = """
@@ -23,7 +26,21 @@ public class ExerciseRepository {
         }
     }
 
-    /** Kategorie einer Übung anhand des Titels aktualisieren */
+    /** Titel, Beschreibung und Kategorie einer Übung per ID aktualisieren */
+    public void update(int id, String newTitle, String newDesc, String newCategory) {
+        String sql = "UPDATE exercises SET title = ?, description = ?, category = ? WHERE id = ?";
+        try (PreparedStatement stmt = DatabaseConnection.get().prepareStatement(sql)) {
+            stmt.setString(1, newTitle);
+            stmt.setString(2, newDesc);
+            stmt.setString(3, newCategory);
+            stmt.setInt(4, id);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /** Kategorie einer Übung anhand des Titels aktualisieren (für Kompatibilität behalten) */
     public void updateCategory(String exerciseTitle, String newCategory) {
         String sql = "UPDATE exercises SET category = ? WHERE title = ?";
         try (PreparedStatement stmt = DatabaseConnection.get().prepareStatement(sql)) {
@@ -44,6 +61,7 @@ public class ExerciseRepository {
             return List.of();
         }
     }
+
     private List<Exercise> mapResults(ResultSet rs) throws SQLException {
         List<Exercise> list = new ArrayList<>();
         while (rs.next()) {
