@@ -1,38 +1,31 @@
 package at.htl.mobilitygamesadvisor.view;
 
-import at.htl.mobilitygamesadvisor.model.CategoryRepository;
-import at.htl.mobilitygamesadvisor.model.ExerciseRepository;
-import at.htl.mobilitygamesadvisor.model.Sammlung;
-import at.htl.mobilitygamesadvisor.model.SammlungRepository;
+import at.htl.mobilitygamesadvisor.util.UserSession;
+import at.htl.mobilitygamesadvisor.model.*;
 import at.htl.mobilitygamesadvisor.presenter.ExercisePresenter;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.control.Button;
-import javafx.scene.control.ComboBox;
-import javafx.scene.control.ContextMenu;
-import javafx.scene.control.Label;
-import javafx.scene.control.MenuItem;
-import javafx.scene.control.ScrollPane;
-import javafx.scene.control.Separator;
-import javafx.scene.control.TextField;
+import javafx.scene.Scene;
+import javafx.scene.control.*;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.function.Consumer;
 import javafx.geometry.Rectangle2D;
 import javafx.geometry.Side;
 import javafx.stage.Screen;
 
-import at.htl.mobilitygamesadvisor.model.Exercise;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 import javafx.scene.media.MediaView;
+import javafx.stage.Stage;
 import javafx.util.Duration;
 
 /**
@@ -70,7 +63,32 @@ public class Controller implements ExerciseView {
         buildDetailPane();
         buildCategoryFilterBar();
         buildCategoryPane();
+        setupAddVideoButton();
         showExercises();
+
+        setupUserHeader();
+    }
+
+    private void setupUserHeader() {
+        User user = UserSession.getInstance().getUser();
+        if (user == null) return;
+
+        Label userLabel = new Label("👤 " + user.getUsername());
+        userLabel.setStyle("-fx-text-fill: #2d7a5c; -fx-font-size: 13px;");
+
+        Button logoutBtn = buildSecondaryBtn("Abmelden");
+        logoutBtn.setOnAction(ev -> {
+            UserSession.getInstance().logout();
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/login.fxml"));
+                Stage stage = (Stage) btnExercises.getScene().getWindow();
+                stage.setScene(new Scene(loader.load()));
+            } catch (IOException e) { e.printStackTrace(); }
+        });
+
+        // add to your existing sidebar or top bar — wherever btnExercises lives
+        // e.g. if there's a VBox sidebar:
+        // sidebar.getChildren().addAll(userLabel, logoutBtn);
     }
 
     // —— Kategorie-Filterleiste bauen (neben Suchfeld) ————————————————————————
@@ -616,10 +634,30 @@ public class Controller implements ExerciseView {
         activeButton.getStyleClass().add("active-nav");
     }
 
+
     private void resetButtonStyles() {
         List.of(btnExercises, btnCategories, btnTracking, btnCollection)
                 .forEach(b -> b.getStyleClass().remove("active-nav"));
     }
+    // add videos
+    private boolean addButtonAdded = false;  // flag to prevent duplicate
+
+    private void setupAddVideoButton() {
+        if (addButtonAdded) return;
+
+        if (searchField.getParent() instanceof HBox parentBox) {
+            Button addVideoBtn = buildActionBtn("+ Neue Übung");
+
+            addVideoBtn.setOnAction(e -> {
+                StackPane root = (StackPane) paneExercises.getParent();
+                AddVideoDialog.showAsOverlay(root, this::applyFilter);
+            });
+
+            parentBox.getChildren().add(addVideoBtn);
+            addButtonAdded = true;
+        }
+    }
+
 
     // —— Card rendering ————————————————————————————————————————————————————————
 
@@ -635,9 +673,6 @@ public class Controller implements ExerciseView {
             try {
                 Media media = new Media(e.videoUrl());
                 MediaPlayer player = new MediaPlayer(media);
-                player.setAutoPlay(false);
-                player.seek(Duration.ZERO);
-                player.pause();
 
                 MediaView thumbnail = new MediaView(player);
                 thumbnail.setFitWidth(220);
@@ -646,17 +681,20 @@ public class Controller implements ExerciseView {
 
                 Label playIcon = new Label("▶");
                 playIcon.setStyle(
-                        "-fx-text-fill: white;" +
-                                "-fx-font-size: 28px;" +
+                        "-fx-text-fill: white; -fx-font-size: 28px;" +
                                 "-fx-effect: dropshadow(gaussian, black, 8, 0, 0, 0);"
                 );
+
+                // Wait until media is ready, THEN seek to first frame
+                player.setOnReady(() -> {
+                    player.seek(Duration.ZERO);
+                    player.pause();
+                });
 
                 imagePlaceholder.getChildren().addAll(thumbnail, playIcon);
             } catch (Exception ex) {
                 imagePlaceholder.getChildren().add(new Label("▶ VIDEO"));
             }
-        } else {
-            imagePlaceholder.getChildren().add(new Label("▶ VIDEO"));
         }
 
         imagePlaceholder.setOnMouseClicked(event -> openDetailInPane(e, paneExercises, btnExercises));
@@ -690,14 +728,27 @@ public class Controller implements ExerciseView {
                 boolean inThis = sammlungRepo.containsExercise(s.id(), e.id());
                 MenuItem item = new MenuItem((inThis ? "✔ " : "+ ") + s.title());
                 item.setOnAction(mev -> {
-                    if (inThis) sammlungRepo.removeExercise(s.id(), e.id());
-                    else        sammlungRepo.addExercise(s.id(), e.id());
-                    applyFilter(); // NEU: statt showExercises direkt
+                    boolean currentlyIn = sammlungRepo.containsExercise(s.id(), e.id());
+                    if (currentlyIn) sammlungRepo.removeExercise(s.id(), e.id());
+                    else             sammlungRepo.addExercise(s.id(), e.id());
+                    applyFilter();
                 });
                 menu.getItems().add(item);
             }
             menu.show(addBtn, Side.BOTTOM, 0, 0);
         });
+        User currentUser = UserSession.getInstance().getUser();
+        if (currentUser != null && e.uploadedBy() == currentUser.getId()) {
+            Button deleteBtn = buildDeleteBtn("🗑");
+            deleteBtn.setOnAction(ev -> {
+                deleteBtn.setText("⚠ Sicher?");
+                deleteBtn.setOnAction(confirm -> {
+                    exerciseRepo.delete(e.id());
+                    applyFilter();
+                });
+            });
+            content.getChildren().add(deleteBtn);
+        }
 
         content.getChildren().addAll(titleLabel, descLabel, tagLabel, addBtn);
         card.getChildren().addAll(imagePlaceholder, content);
@@ -712,9 +763,10 @@ public class Controller implements ExerciseView {
 
     private void openDetailInPane(Exercise e, VBox returnPane, Button returnBtn,
                                   List<Exercise> navList, int navIndex) {
-        disposeCurrentPlayer();
+        disposeCurrentPlayer(); // Standard cleanup
         paneDetail.getChildren().clear();
 
+        // --- BUTTON STYLES ---
         String styleNormal = "-fx-background-color: transparent;-fx-text-fill: #2d7a5c;" +
                 "-fx-font-size: 14px;-fx-cursor: hand;-fx-border-color: #2d7a5c;" +
                 "-fx-border-radius: 6px;-fx-padding: 8 16 8 16;";
@@ -722,6 +774,7 @@ public class Controller implements ExerciseView {
                 "-fx-font-size: 14px;-fx-cursor: hand;-fx-border-color: #2d7a5c;" +
                 "-fx-border-radius: 6px;-fx-padding: 8 16 8 16;";
 
+        // --- BACK BUTTON ---
         Button backBtn = new Button("← Zurück zur Übersicht");
         backBtn.getStyleClass().add("video-ctrl-btn");
         backBtn.setStyle(styleNormal);
@@ -736,82 +789,104 @@ public class Controller implements ExerciseView {
         HBox backRow = new HBox(backBtn);
         backRow.setPadding(new Insets(28, 40, 8, 40));
 
+        // --- TITLE & DESCRIPTION DISPLAY ---
         Label titleLabel = new Label(e.title());
         titleLabel.getStyleClass().add("detail-title");
         titleLabel.setWrapText(true);
-
-        Label categoryBadge = new Label(e.category());
-        categoryBadge.getStyleClass().add("card-tag");
-
-        boolean detailInitAdded = sammlungRepo.isInAnySammlung(e.id());
-        Button collectionBtn = buildActionBtn(detailInitAdded ? "✔ Sammelmappe" : "+ Zur Sammelmappe");
-        collectionBtn.setOnAction(ev -> {
-            List<Sammlung> sammlungen = sammlungRepo.getAll();
-            if (sammlungen.isEmpty()) return;
-            ContextMenu menu = new ContextMenu();
-            for (Sammlung s : sammlungen) {
-                boolean inThis = sammlungRepo.containsExercise(s.id(), e.id());
-                MenuItem item = new MenuItem((inThis ? "✔ " : "+ ") + s.title());
-                item.setOnAction(mev -> {
-                    if (inThis) sammlungRepo.removeExercise(s.id(), e.id());
-                    else        sammlungRepo.addExercise(s.id(), e.id());
-                    boolean nowInAny = sammlungRepo.isInAnySammlung(e.id());
-                    collectionBtn.setText(nowInAny ? "✔ Sammelmappe" : "+ Zur Sammelmappe");
-                });
-                menu.getItems().add(item);
-            }
-            menu.show(collectionBtn, Side.BOTTOM, 0, 0);
-        });
-
-        ComboBox<String> categoryCombo = new ComboBox<>();
-        categoryCombo.getItems().addAll(categoryRepo.getAll());
-        categoryCombo.setValue(e.category());
-        categoryCombo.setStyle(
-                "-fx-background-color: #ffffff;" +
-                        "-fx-text-fill: #1a2e2a;" +
-                        "-fx-border-color: #d8e4e0;" +
-                        "-fx-border-radius: 6px;" +
-                        "-fx-background-radius: 6px;" +
-                        "-fx-pref-width: 180px;"
-        );
-
-        Label savedLabel = new Label("✔ Gespeichert");
-        savedLabel.setStyle("-fx-text-fill: #2d7a5c;-fx-font-size: 13px;");
-        savedLabel.setVisible(false);
-        savedLabel.managedProperty().bind(savedLabel.visibleProperty());
-
-        Button assignBtn = buildActionBtn("Zuweisen");
-        assignBtn.setOnAction(ev -> {
-            String selected = categoryCombo.getValue();
-            if (selected != null && !selected.isBlank()) {
-                exerciseRepo.updateCategory(e.title(), selected);
-                categoryBadge.setText(selected);
-                savedLabel.setVisible(true);
-                new Thread(() -> {
-                    try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
-                    javafx.application.Platform.runLater(() -> savedLabel.setVisible(false));
-                }).start();
-            }
-        });
-
-        boolean hasNav  = navList != null && navList.size() > 1;
-        boolean hasPrev = hasNav && navIndex > 0;
-        boolean hasNext = hasNav && navIndex < navList.size() - 1;
-
-        HBox infoRow = new HBox(12,
-                categoryBadge, titleLabel, collectionBtn, categoryCombo, assignBtn, savedLabel);
-        infoRow.setAlignment(Pos.CENTER_LEFT);
-        infoRow.setPadding(new Insets(16, 40, 12, 40));
 
         String descText = (e.desc() != null && !e.desc().isBlank())
                 ? e.desc() : "Keine Beschreibung vorhanden.";
         Label descContent = new Label(descText);
         descContent.getStyleClass().add("detail-description");
         descContent.setWrapText(true);
-        HBox.setHgrow(descContent, Priority.ALWAYS);
-        HBox descRow = new HBox(descContent);
-        descRow.setPadding(new Insets(0, 40, 28, 40));
 
+        Label categoryBadge = new Label(e.category());
+        categoryBadge.getStyleClass().add("card-tag");
+
+        // --- EDIT FIELDS ---
+        TextField titleField = new TextField(e.title());
+        titleField.getStyleClass().add("search-field");
+        titleField.setVisible(false); titleField.setManaged(false);
+
+        TextArea descField = new TextArea(e.desc() != null ? e.desc() : "");
+        descField.setWrapText(true); descField.setPrefRowCount(3);
+        descField.getStyleClass().add("search-field");
+        descField.setVisible(false); descField.setManaged(false);
+
+        ComboBox<String> editCategoryCombo = new ComboBox<>();
+        editCategoryCombo.getItems().addAll(categoryRepo.getAll());
+        editCategoryCombo.setValue(e.category());
+        editCategoryCombo.setVisible(false); editCategoryCombo.setManaged(false);
+
+        // --- EDIT CONTROLS ---
+        Label editSavedLabel = new Label("✔ Gespeichert");
+        editSavedLabel.setStyle("-fx-text-fill: #2d7a5c; -fx-font-size: 13px;");
+        editSavedLabel.setVisible(false); editSavedLabel.setManaged(false);
+
+        Button editBtn      = buildSecondaryBtn("✏ Bearbeiten");
+        Button saveEditBtn  = buildActionBtn("✔ Speichern");
+        Button cancelEditBtn = buildSecondaryBtn("✖ Abbrechen");
+        saveEditBtn.setVisible(false);    saveEditBtn.setManaged(false);
+        cancelEditBtn.setVisible(false);  cancelEditBtn.setManaged(false);
+
+        // --- BUTTON ACTIONS ---
+        editBtn.setOnAction(ev -> {
+            // Hide Labels
+            titleLabel.setVisible(false);        titleLabel.setManaged(false);
+            descContent.setVisible(false);       descContent.setManaged(false);
+            categoryBadge.setVisible(false);     categoryBadge.setManaged(false);
+            // Show Fields
+            titleField.setVisible(true);         titleField.setManaged(true);
+            descField.setVisible(true);          descField.setManaged(true);
+            editCategoryCombo.setVisible(true);  editCategoryCombo.setManaged(true);
+            // Toggle Buttons
+            editBtn.setVisible(false);           editBtn.setManaged(false);
+            saveEditBtn.setVisible(true);        saveEditBtn.setManaged(true);
+            cancelEditBtn.setVisible(true);      cancelEditBtn.setManaged(true);
+        });
+
+        cancelEditBtn.setOnAction(ev -> {
+            titleField.setText(e.title());
+            descField.setText(e.desc() != null ? e.desc() : "");
+            editCategoryCombo.setValue(e.category());
+            // Restore Visibility
+            titleField.setVisible(false);        titleField.setManaged(false);
+            descField.setVisible(false);         descField.setManaged(false);
+            editCategoryCombo.setVisible(false); editCategoryCombo.setManaged(false);
+            titleLabel.setVisible(true);         titleLabel.setManaged(true);
+            descContent.setVisible(true);        descContent.setManaged(true);
+            categoryBadge.setVisible(true);      categoryBadge.setManaged(true);
+            saveEditBtn.setVisible(false);       saveEditBtn.setManaged(false);
+            cancelEditBtn.setVisible(false);     cancelEditBtn.setManaged(false);
+            editBtn.setVisible(true);            editBtn.setManaged(true);
+        });
+
+        saveEditBtn.setOnAction(ev -> {
+            String newTitle    = titleField.getText().trim();
+            String newDesc     = descField.getText().trim();
+            String newCategory = editCategoryCombo.getValue();
+            if (newTitle.isBlank()) return;
+
+            exerciseRepo.update(e.id(), newTitle, newDesc, newCategory);
+
+            // Update UI with new values
+            titleLabel.setText(newTitle);
+            descContent.setText(newDesc.isBlank() ? "Keine Beschreibung vorhanden." : newDesc);
+            categoryBadge.setText(newCategory != null ? newCategory : "");
+
+            cancelEditBtn.fire(); // Re-use the visibility toggle logic
+
+            editSavedLabel.setVisible(true); editSavedLabel.setManaged(true);
+            new Thread(() -> {
+                try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
+                javafx.application.Platform.runLater(() -> {
+                    editSavedLabel.setVisible(false); editSavedLabel.setManaged(false);
+                });
+            }).start();
+        });
+
+        // --- NAVIGATION & VIDEO ---
+        boolean hasNav  = navList != null && navList.size() > 1;
         Rectangle2D screen = Screen.getPrimary().getVisualBounds();
         double videoFitW = screen.getWidth() - 310;
         double videoFitH = screen.getHeight() - 280;
@@ -819,62 +894,57 @@ public class Controller implements ExerciseView {
 
         StackPane videoStack = new StackPane(currentPlayer);
         if (hasNav) {
-            Button[] overlays = new Button[2];
-            if (hasPrev) {
+            if (navIndex > 0) {
                 Button prevArrow = buildArrowOverlayBtn("❮");
-                prevArrow.setVisible(false);
                 StackPane.setAlignment(prevArrow, Pos.CENTER_LEFT);
-                StackPane.setMargin(prevArrow, new Insets(0, 0, 0, 12));
-                int prevIdx = navIndex - 1;
-                prevArrow.setOnAction(ev -> openDetailInPane(
-                        navList.get(prevIdx), returnPane, returnBtn, navList, prevIdx));
+                prevArrow.setOnAction(ev -> openDetailInPane(navList.get(navIndex - 1), returnPane, returnBtn, navList, navIndex - 1));
                 videoStack.getChildren().add(prevArrow);
-                overlays[0] = prevArrow;
             }
-            if (hasNext) {
+            if (navIndex < navList.size() - 1) {
                 Button nextArrow = buildArrowOverlayBtn("❯");
-                nextArrow.setVisible(false);
                 StackPane.setAlignment(nextArrow, Pos.CENTER_RIGHT);
-                StackPane.setMargin(nextArrow, new Insets(0, 12, 0, 0));
-                int nextIdx = navIndex + 1;
-                nextArrow.setOnAction(ev -> openDetailInPane(
-                        navList.get(nextIdx), returnPane, returnBtn, navList, nextIdx));
+                nextArrow.setOnAction(ev -> openDetailInPane(navList.get(navIndex + 1), returnPane, returnBtn, navList, navIndex + 1));
                 videoStack.getChildren().add(nextArrow);
-                overlays[1] = nextArrow;
             }
-            videoStack.hoverProperty().addListener((obs, was, now) -> {
-                for (Button b : overlays) if (b != null) b.setVisible(now);
-            });
         }
 
-        HBox videoWrapper = new HBox(videoStack);
-        videoWrapper.setAlignment(Pos.CENTER);
-        videoWrapper.setMaxWidth(Double.MAX_VALUE);
-        videoWrapper.setPadding(new Insets(16, 0, 0, 0));
+        // --- LAYOUT ASSEMBLY ---
+        HBox infoRow = new HBox(12, categoryBadge, editCategoryCombo, titleLabel, titleField);
+        infoRow.setAlignment(Pos.CENTER_LEFT);
+        infoRow.setPadding(new Insets(16, 40, 12, 40));
 
-        VBox innerLayout = new VBox(0,
-                backRow, videoWrapper,
-                infoRow, descRow
-        );
+        User currentUser = UserSession.getInstance().getUser();
+        if (currentUser != null && e.uploadedBy() == currentUser.getId()) {
+            infoRow.getChildren().addAll(editBtn, saveEditBtn, cancelEditBtn, editSavedLabel);
+        }
+
+        VBox descBox = new VBox(5, descContent, descField);
+        descBox.setPadding(new Insets(0, 40, 28, 40));
+
+        VBox innerLayout = new VBox(0, backRow, videoStack, infoRow, descBox);
         innerLayout.setStyle("-fx-background-color: #f4f6f5;");
 
         ScrollPane scroll = new ScrollPane(innerLayout);
         scroll.setFitToWidth(true);
-        scroll.getStyleClass().add("transparent-scroll");
-        scroll.setStyle("-fx-background-color: #f4f6f5; -fx-background: #f4f6f5;");
         VBox.setVgrow(scroll, Priority.ALWAYS);
 
         paneDetail.getChildren().add(scroll);
-
-        List.of(paneExercises, paneCategories, paneTracking, paneCollection)
-                .forEach(p -> p.setVisible(false));
+        hideMainPanes(); // Helper to set visible(false) on all other panes
         paneDetail.setVisible(true);
+    }
+
+    private void hideMainPanes() {
+        List.of(paneExercises, paneCategories, paneTracking, paneCollection)
+                .forEach(p -> {
+                    if (p != null) p.setVisible(false);
+                });
     }
 
     private void hideDetailPane() {
         if (paneDetail != null) paneDetail.setVisible(false);
         disposeCurrentPlayer();
     }
+
 
     private void disposeCurrentPlayer() {
         if (currentPlayer != null) {

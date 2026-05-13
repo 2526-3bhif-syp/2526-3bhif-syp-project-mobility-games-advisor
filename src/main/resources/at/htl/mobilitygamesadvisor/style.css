@@ -408,3 +408,40 @@
 .context-menu .menu-item:hover .label {
     -fx-text-fill: #2d7a5c;
 }
+
+/* The main dialog container */
+.custom-dialog {
+    -fx-background-color: #242424;
+    -fx-background-radius: 15;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 10, 0, 0, 0);
+}
+
+/* Style all text inputs */
+.custom-dialog .text-field, .custom-dialog .text-area {
+    -fx-background-color: #333333;
+    -fx-text-fill: white;
+    -fx-prompt-text-fill: #888;
+    -fx-background-radius: 5;
+    /* This removes the blue border from image_8ddade.jpg */
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+/* Add a subtle sage green border only when focused */
+.custom-dialog .text-field:focused, .custom-dialog .text-area:focused {
+    -fx-border-color: #5da37b;
+    -fx-border-radius: 5;
+    -fx-border-width: 1;
+}
+
+/* The File Picker Button */
+.file-select-button {
+    -fx-background-color: #444;
+    -fx-text-fill: white;
+    -fx-background-radius: 5;
+    -fx-cursor: hand;
+}
+
+.file-select-button:hover {
+    -fx-background-color: #555;
+}

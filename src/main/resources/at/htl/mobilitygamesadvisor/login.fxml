@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.*?>
+
+<StackPane xmlns="http://javafx.com/javafx"
+           xmlns:fx="http://javafx.com/fxml"
+           fx:controller="at.htl.mobilitygamesadvisor.view.LoginController"
+           stylesheets="@style.css"
+           style="-fx-background-color: #f4f6f5;">
+
+    <!-- Background subtle grid pattern -->
+    <VBox alignment="CENTER" spacing="0">
+
+        <!-- Top accent bar (matches sidebar green) -->
+        <Region prefHeight="5"
+                style="-fx-background-color: #2d7a5c;" />
+
+        <HBox alignment="CENTER" VBox.vgrow="ALWAYS">
+
+            <!-- Left branding panel -->
+            <VBox alignment="CENTER" spacing="24"
+                  prefWidth="420" minHeight="560"
+                  style="-fx-background-color: #2d7a5c; -fx-padding: 60 50 60 50;">
+
+                <!-- Logo / Icon placeholder -->
+                <StackPane alignment="CENTER">
+                    <Circle radius="42"
+                            fill="#1e5c44" />
+                    <Label text="🏃"
+                           style="-fx-font-size: 38px;" />
+                </StackPane>
+
+                <VBox spacing="10" alignment="CENTER">
+                    <Label text="Mobility Games"
+                           style="-fx-text-fill: #ffffff;
+                                  -fx-font-size: 26px;
+                                  -fx-font-weight: bold;
+                                  -fx-font-family: 'Segoe UI';" />
+                    <Label text="Advisor"
+                           style="-fx-text-fill: #a8d5c2;
+                                  -fx-font-size: 22px;
+                                  -fx-font-family: 'Segoe UI';" />
+                </VBox>
+
+                <Region prefHeight="20" />
+
+                <Label text="Bewegung für alle –\nindividuell, motivierend\nund barrierefrei."
+                       wrapText="true"
+                       style="-fx-text-fill: #c8e8dc;
+                              -fx-font-size: 14px;
+                              -fx-font-family: 'Segoe UI';
+                              -fx-line-spacing: 4;
+                              -fx-text-alignment: center;"
+                       alignment="CENTER" />
+
+                <Region VBox.vgrow="ALWAYS" />
+
+                <!-- Version -->
+                <Label text="v1.0.0"
+                       style="-fx-text-fill: #5a9e82;
+                              -fx-font-size: 11px;" />
+            </VBox>
+
+            <!-- Right login form -->
+            <VBox alignment="CENTER" spacing="0"
+                  HBox.hgrow="ALWAYS"
+                  style="-fx-background-color: #f4f6f5;
+                         -fx-padding: 0 60 0 60;">
+
+                <!-- Card -->
+                <VBox spacing="24"
+                      maxWidth="400"
+                      style="-fx-background-color: #ffffff;
+                             -fx-background-radius: 12px;
+                             -fx-border-color: #e0ece8;
+                             -fx-border-radius: 12px;
+                             -fx-border-width: 1;
+                             -fx-padding: 44 40 44 40;
+                             -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.07), 20, 0, 0, 4);">
+
+                    <!-- Header -->
+                    <VBox spacing="6">
+                        <Label text="Willkommen zurück"
+                               style="-fx-font-size: 22px;
+                                      -fx-font-weight: bold;
+                                      -fx-text-fill: #1a2e2a;
+                                      -fx-font-family: 'Segoe UI';" />
+                        <Label text="Melde dich an, um fortzufahren."
+                               style="-fx-font-size: 13px;
+                                      -fx-text-fill: #6b8c82;
+                                      -fx-font-family: 'Segoe UI';" />
+                    </VBox>
+
+                    <Separator />
+
+                    <!-- Username -->
+                    <VBox spacing="7">
+                        <Label text="Benutzername"
+                               style="-fx-font-size: 12px;
+                                      -fx-font-weight: bold;
+                                      -fx-text-fill: #3a5a50;
+                                      -fx-font-family: 'Segoe UI';" />
+                        <TextField fx:id="usernameField"
+                                   promptText="Benutzername eingeben..."
+                                   maxWidth="Infinity"
+                                   style="-fx-background-color: #f8faf9;
+                                          -fx-border-color: #d8e4e0;
+                                          -fx-border-radius: 7px;
+                                          -fx-background-radius: 7px;
+                                          -fx-padding: 10 14 10 14;
+                                          -fx-font-size: 13px;
+                                          -fx-font-family: 'Segoe UI';
+                                          -fx-text-fill: #1a2e2a;" />
+                    </VBox>
+
+                    <!-- Password -->
+                    <VBox spacing="7">
+                        <Label text="Passwort"
+                               style="-fx-font-size: 12px;
+                                      -fx-font-weight: bold;
+                                      -fx-text-fill: #3a5a50;
+                                      -fx-font-family: 'Segoe UI';" />
+                        <PasswordField fx:id="passwordField"
+                                       promptText="Passwort eingeben..."
+                                       maxWidth="Infinity"
+                                       style="-fx-background-color: #f8faf9;
+                                              -fx-border-color: #d8e4e0;
+                                              -fx-border-radius: 7px;
+                                              -fx-background-radius: 7px;
+                                              -fx-padding: 10 14 10 14;
+                                              -fx-font-size: 13px;
+                                              -fx-font-family: 'Segoe UI';
+                                              -fx-text-fill: #1a2e2a;" />
+                    </VBox>
+
+                    <!-- Error label -->
+                    <Label fx:id="errorLabel"
+                           text=""
+                           wrapText="true"
+                           maxWidth="Infinity"
+                           visible="false"
+                           style="-fx-text-fill: #c0392b;
+                                  -fx-background-color: #fdf0ef;
+                                  -fx-border-color: #f5c6c2;
+                                  -fx-border-radius: 6px;
+                                  -fx-background-radius: 6px;
+                                  -fx-padding: 8 12 8 12;
+                                  -fx-font-size: 12px;
+                                  -fx-font-family: 'Segoe UI';" />
+
+                    <!-- Login button -->
+                    <Button text="Anmelden"
+                            maxWidth="Infinity"
+                            onAction="#handleLogin"
+                            style="-fx-background-color: #2d7a5c;
+                                   -fx-text-fill: #ffffff;
+                                   -fx-font-size: 14px;
+                                   -fx-font-weight: bold;
+                                   -fx-font-family: 'Segoe UI';
+                                   -fx-background-radius: 7px;
+                                   -fx-padding: 12 0 12 0;
+                                   -fx-cursor: hand;" />
+
+                    <Separator />
+
+                    <!-- Signup link -->
+                    <HBox alignment="CENTER" spacing="6">
+                        <Label text="Noch kein Konto?"
+                               style="-fx-text-fill: #6b8c82;
+                                      -fx-font-size: 12px;
+                                      -fx-font-family: 'Segoe UI';" />
+                        <Button text="Registrieren"
+                                onAction="#handleGoToSignup"
+                                style="-fx-background-color: transparent;
+                                       -fx-text-fill: #2d7a5c;
+                                       -fx-font-size: 12px;
+                                       -fx-font-weight: bold;
+                                       -fx-font-family: 'Segoe UI';
+                                       -fx-cursor: hand;
+                                       -fx-padding: 0;
+                                       -fx-border-width: 0;" />
+                    </HBox>
+
+                </VBox>
+            </VBox>
+        </HBox>
+    </VBox>
+</StackPane>

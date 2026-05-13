@@ -13,8 +13,9 @@ import java.io.IOException;
 public class App extends Application {
     @Override
     public void start(Stage stage) throws IOException {
+        FXMLLoader fxmlLoader = new FXMLLoader(App.class.getResource("login.fxml"));
         new VideoSyncService().sync();
-        FXMLLoader fxmlLoader = new FXMLLoader(App.class.getResource("main-view.fxml"));
+
 
         // Bildschirmgröße ermitteln und Fenster fast auf Vollbild setzen
         Rectangle2D screenBounds = Screen.getPrimary().getVisualBounds();
