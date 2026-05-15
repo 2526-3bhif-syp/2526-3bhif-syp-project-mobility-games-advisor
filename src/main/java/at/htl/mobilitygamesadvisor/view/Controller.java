@@ -329,7 +329,7 @@ public class Controller implements ExerciseView {
 
     private void buildSammlungListPane() {
         paneCollection.getChildren().clear();
-        paneCollection.setSpacing(20);
+        paneCollection.setSpacing(16);
         paneCollection.setPadding(new Insets(30, 40, 30, 40));
 
         Label header = new Label("Sammelmappen");
@@ -355,18 +355,22 @@ public class Controller implements ExerciseView {
         createRow.setAlignment(Pos.CENTER_LEFT);
 
         List<Sammlung> sammlungen = sammlungRepo.getAll();
-        VBox list = new VBox(10);
+
+        javafx.scene.layout.FlowPane grid = new javafx.scene.layout.FlowPane();
+        grid.setHgap(16);
+        grid.setVgap(16);
+
         if (sammlungen.isEmpty()) {
             Label empty = new Label("Noch keine Sammelmappen vorhanden. Erstelle eine oben.");
             empty.getStyleClass().add("card-description");
-            list.getChildren().add(empty);
+            grid.getChildren().add(empty);
         } else {
             for (Sammlung s : sammlungen) {
-                list.getChildren().add(buildSammlungRow(s));
+                grid.getChildren().add(buildSammlungCard(s));
             }
         }
 
-        ScrollPane scroll = new ScrollPane(list);
+        ScrollPane scroll = new ScrollPane(grid);
         scroll.setFitToWidth(true);
         scroll.getStyleClass().add("transparent-scroll");
         scroll.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
@@ -375,35 +379,75 @@ public class Controller implements ExerciseView {
         paneCollection.getChildren().addAll(header, subtitle, sep, createRow, scroll);
     }
 
-    private HBox buildSammlungRow(Sammlung s) {
+    private VBox buildSammlungCard(Sammlung s) {
         int count = sammlungRepo.countExercises(s.id());
+
+        VBox card = new VBox(0);
+        card.getStyleClass().add("exercise-card");
+        card.setPrefWidth(460);
+        card.setMaxWidth(460);
+        card.setStyle("-fx-pref-width: 460; -fx-max-width: 460;");
+
+        // — Header with gradient and count badge
+        StackPane cardHeader = new StackPane();
+        cardHeader.setStyle(
+                "-fx-background-color: linear-gradient(to bottom right, #b8dece, #e8f4ef);" +
+                "-fx-background-radius: 14 14 0 0;" +
+                "-fx-min-height: 120px; -fx-pref-height: 120px;" +
+                "-fx-border-color: #dceae5; -fx-border-width: 0 0 1 0;");
+        cardHeader.setPrefHeight(120);
+
+        Label folderIcon = new Label("📁");
+        folderIcon.setStyle("-fx-font-size: 52px;");
+
+        Label countBadge = new Label(count + (count == 1 ? " Übung" : " Übungen"));
+        countBadge.setStyle(
+                "-fx-background-color: #2d7a5c; -fx-text-fill: white;" +
+                "-fx-font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;" +
+                "-fx-font-size: 11px; -fx-font-weight: bold;" +
+                "-fx-padding: 4 10 4 10; -fx-background-radius: 20;");
+        StackPane.setAlignment(countBadge, Pos.TOP_RIGHT);
+        StackPane.setMargin(countBadge, new Insets(12, 12, 0, 0));
+
+        cardHeader.getChildren().addAll(folderIcon, countBadge);
+
+        // — Content
+        VBox content = new VBox(10);
+        content.getStyleClass().add("card-content");
+        content.setPadding(new Insets(14, 16, 16, 16));
 
         Label titleLabel = new Label(s.title());
         titleLabel.getStyleClass().add("card-title");
-        HBox.setHgrow(titleLabel, Priority.ALWAYS);
+        titleLabel.setWrapText(true);
+        titleLabel.setStyle("-fx-font-size: 15px;");
 
         TextField renameField = new TextField(s.title());
         renameField.getStyleClass().add("search-field");
-        renameField.setPrefWidth(220);
         renameField.setVisible(false);
         renameField.setManaged(false);
-        HBox.setHgrow(renameField, Priority.ALWAYS);
 
-        Label countLabel = new Label(count + " Übung" + (count == 1 ? "" : "en"));
-        countLabel.getStyleClass().add("card-tag");
+        Button openBtn = buildActionBtn("▶  Sammelmappe öffnen");
+        openBtn.setMaxWidth(Double.MAX_VALUE);
 
-        Button openBtn    = buildActionBtn("▶ Öffnen");
-        Button renameBtn  = buildSecondaryBtn("✏ Umbenennen");
-        Button saveBtn    = buildActionBtn("✔ Speichern");
-        Button cancelBtn  = buildSecondaryBtn("✖ Abbrechen");
-        Button deleteBtn  = buildDeleteBtn("🗑 Löschen");
-        Button confirmBtn = buildDeleteBtn("⚠ Bestätigen");
+        // Normal buttons row
+        Button renameBtn  = buildSecondaryBtn("✏  Umbenennen");
+        Button deleteBtn  = buildDeleteBtn("🗑  Löschen");
+        HBox normalRow = new HBox(8, renameBtn, deleteBtn);
+        normalRow.setAlignment(Pos.CENTER_LEFT);
+
+        // Rename buttons row
+        Button saveBtn    = buildActionBtn("✔  Speichern");
+        Button cancelBtn  = buildSecondaryBtn("✖  Abbrechen");
+        HBox renameRow = new HBox(8, saveBtn, cancelBtn);
+        renameRow.setAlignment(Pos.CENTER_LEFT);
+        renameRow.setVisible(false); renameRow.setManaged(false);
+
+        // Delete confirm row
+        Button confirmBtn = buildDeleteBtn("⚠  Ja, löschen");
         Button abortBtn   = buildSecondaryBtn("Abbrechen");
-
-        saveBtn.setVisible(false);    saveBtn.setManaged(false);
-        cancelBtn.setVisible(false);  cancelBtn.setManaged(false);
-        confirmBtn.setVisible(false); confirmBtn.setManaged(false);
-        abortBtn.setVisible(false);   abortBtn.setManaged(false);
+        HBox deleteRow = new HBox(8, confirmBtn, abortBtn);
+        deleteRow.setAlignment(Pos.CENTER_LEFT);
+        deleteRow.setVisible(false); deleteRow.setManaged(false);
 
         openBtn.setOnAction(ev -> { openSammlungId = s.id(); buildCollectionPane(); });
 
@@ -411,58 +455,43 @@ public class Controller implements ExerciseView {
             titleLabel.setVisible(false);  titleLabel.setManaged(false);
             renameField.setVisible(true);  renameField.setManaged(true);
             openBtn.setVisible(false);     openBtn.setManaged(false);
-            renameBtn.setVisible(false);   renameBtn.setManaged(false);
-            deleteBtn.setVisible(false);   deleteBtn.setManaged(false);
-            saveBtn.setVisible(true);      saveBtn.setManaged(true);
-            cancelBtn.setVisible(true);    cancelBtn.setManaged(true);
-            renameField.requestFocus();
-            renameField.selectAll();
+            normalRow.setVisible(false);   normalRow.setManaged(false);
+            renameRow.setVisible(true);    renameRow.setManaged(true);
+            renameField.requestFocus();    renameField.selectAll();
         });
 
         saveBtn.setOnAction(ev -> {
-            String newTitle = renameField.getText().trim();
-            if (!newTitle.isBlank() && !newTitle.equals(s.title())) {
-                sammlungRepo.rename(s.id(), newTitle);
-                buildCollectionPane();
-            } else {
-                cancelBtn.fire();
-            }
+            String t = renameField.getText().trim();
+            if (!t.isBlank()) { sammlungRepo.rename(s.id(), t); buildCollectionPane(); }
+            else cancelBtn.fire();
         });
 
         cancelBtn.setOnAction(ev -> {
             renameField.setText(s.title());
             renameField.setVisible(false);  renameField.setManaged(false);
             titleLabel.setVisible(true);    titleLabel.setManaged(true);
-            saveBtn.setVisible(false);      saveBtn.setManaged(false);
-            cancelBtn.setVisible(false);    cancelBtn.setManaged(false);
             openBtn.setVisible(true);       openBtn.setManaged(true);
-            renameBtn.setVisible(true);     renameBtn.setManaged(true);
-            deleteBtn.setVisible(true);     deleteBtn.setManaged(true);
+            normalRow.setVisible(true);     normalRow.setManaged(true);
+            renameRow.setVisible(false);    renameRow.setManaged(false);
         });
 
         deleteBtn.setOnAction(ev -> {
-            deleteBtn.setVisible(false);   deleteBtn.setManaged(false);
             openBtn.setVisible(false);     openBtn.setManaged(false);
-            renameBtn.setVisible(false);   renameBtn.setManaged(false);
-            confirmBtn.setVisible(true);   confirmBtn.setManaged(true);
-            abortBtn.setVisible(true);     abortBtn.setManaged(true);
-        });
-        confirmBtn.setOnAction(ev -> { sammlungRepo.delete(s.id()); buildCollectionPane(); });
-        abortBtn.setOnAction(ev -> {
-            confirmBtn.setVisible(false);  confirmBtn.setManaged(false);
-            abortBtn.setVisible(false);    abortBtn.setManaged(false);
-            deleteBtn.setVisible(true);    deleteBtn.setManaged(true);
-            openBtn.setVisible(true);      openBtn.setManaged(true);
-            renameBtn.setVisible(true);    renameBtn.setManaged(true);
+            normalRow.setVisible(false);   normalRow.setManaged(false);
+            deleteRow.setVisible(true);    deleteRow.setManaged(true);
         });
 
-        HBox row = new HBox(12, titleLabel, renameField, countLabel,
-                openBtn, renameBtn, saveBtn, cancelBtn, deleteBtn, confirmBtn, abortBtn);
-        row.setAlignment(Pos.CENTER_LEFT);
-        row.setPadding(new Insets(10, 16, 10, 16));
-        row.setStyle("-fx-background-color: #ffffff; -fx-background-radius: 8px;" +
-                "-fx-border-color: #e0ece8; -fx-border-radius: 8px; -fx-border-width: 1;");
-        return row;
+        confirmBtn.setOnAction(ev -> { sammlungRepo.delete(s.id()); buildCollectionPane(); });
+
+        abortBtn.setOnAction(ev -> {
+            deleteRow.setVisible(false);   deleteRow.setManaged(false);
+            openBtn.setVisible(true);      openBtn.setManaged(true);
+            normalRow.setVisible(true);    normalRow.setManaged(true);
+        });
+
+        content.getChildren().addAll(titleLabel, renameField, openBtn, normalRow, renameRow, deleteRow);
+        card.getChildren().addAll(cardHeader, content);
+        return card;
     }
 
     private void buildSammlungDetailPane(int sammlungId) {
@@ -506,12 +535,14 @@ public class Controller implements ExerciseView {
         HBox topRow = new HBox(12, countLabel, clearBtn);
         topRow.setAlignment(Pos.CENTER_LEFT);
 
-        VBox list = new VBox(10);
+        javafx.scene.layout.FlowPane grid = new javafx.scene.layout.FlowPane();
+        grid.setHgap(16);
+        grid.setVgap(16);
         for (int i = 0; i < exercises.size(); i++) {
-            list.getChildren().add(buildCollectionRow(exercises.get(i), sammlungId, exercises, i));
+            grid.getChildren().add(buildCollectionCard(exercises.get(i), sammlungId, exercises, i));
         }
 
-        ScrollPane scroll = new ScrollPane(list);
+        ScrollPane scroll = new ScrollPane(grid);
         scroll.setFitToWidth(true);
         scroll.getStyleClass().add("transparent-scroll");
         scroll.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
@@ -520,31 +551,47 @@ public class Controller implements ExerciseView {
         paneCollection.getChildren().addAll(backBtn, header, sep, topRow, scroll);
     }
 
-    private HBox buildCollectionRow(Exercise e, int sammlungId, List<Exercise> allExercises, int index) {
+    private VBox buildCollectionCard(Exercise e, int sammlungId, List<Exercise> allExercises, int index) {
+        VBox card = new VBox(0);
+        card.getStyleClass().add("exercise-card");
+
+        // — Placeholder area (same as exercise cards)
+        StackPane imagePlaceholder = new StackPane();
+        imagePlaceholder.getStyleClass().add("card-image-placeholder");
+        imagePlaceholder.setPrefHeight(120);
+        Label playIcon = new Label("▶");
+        playIcon.setStyle("-fx-text-fill: #5cad8a; -fx-font-size: 28px;");
+        imagePlaceholder.getChildren().add(playIcon);
+        imagePlaceholder.setOnMouseClicked(ev ->
+                openDetailInPane(e, paneCollection, btnCollection, allExercises, index));
+
+        // — Content
+        VBox content = new VBox(8);
+        content.getStyleClass().add("card-content");
+        content.setOnMouseClicked(ev ->
+                openDetailInPane(e, paneCollection, btnCollection, allExercises, index));
+
         Label titleLabel = new Label(e.title());
         titleLabel.getStyleClass().add("card-title");
-        titleLabel.setMinWidth(200);
-        HBox.setHgrow(titleLabel, Priority.ALWAYS);
+        titleLabel.setWrapText(true);
 
-        Label tagLabel = new Label(e.category());
+        Label tagLabel = new Label(e.category() != null ? e.category() : "Unkategorisiert");
         tagLabel.getStyleClass().add("card-tag");
 
-        Button openBtn = buildSecondaryBtn("▶ Abspielen");
-        openBtn.setOnAction(ev -> openDetailInPane(e, paneCollection, btnCollection, allExercises, index));
-
-        Button removeBtn = buildDeleteBtn("✖ Entfernen");
+        String btnNormal = "-fx-background-color: transparent;-fx-text-fill: #2d7a5c;" +
+                "-fx-font-size: 11px;-fx-cursor: hand;-fx-padding: 4 8 4 8;" +
+                "-fx-border-color: #c0392b;-fx-border-radius: 6px;-fx-border-width: 1;-fx-text-fill: #c0392b;";
+        Button removeBtn = new Button("✖ Entfernen");
+        removeBtn.setStyle(btnNormal);
         removeBtn.setOnAction(ev -> {
             sammlungRepo.removeExercise(sammlungId, e.id());
             buildCollectionPane();
-            applyFilter(); // NEU: statt showExercises direkt
+            applyFilter();
         });
 
-        HBox row = new HBox(12, titleLabel, tagLabel, openBtn, removeBtn);
-        row.setAlignment(Pos.CENTER_LEFT);
-        row.setPadding(new Insets(10, 16, 10, 16));
-        row.setStyle("-fx-background-color: #ffffff; -fx-background-radius: 8px;" +
-                "-fx-border-color: #e0ece8; -fx-border-radius: 8px; -fx-border-width: 1;");
-        return row;
+        content.getChildren().addAll(titleLabel, tagLabel, removeBtn);
+        card.getChildren().addAll(imagePlaceholder, content);
+        return card;
     }
 
     // —— Button-Hilfsmethoden —————————————————————————————————————————————————
@@ -699,6 +746,7 @@ public class Controller implements ExerciseView {
 
         imagePlaceholder.setOnMouseClicked(event -> openDetailInPane(e, paneExercises, btnExercises));
         VBox content = new VBox(8);
+        content.setOnMouseClicked(event -> openDetailInPane(e, paneExercises, btnExercises));
         content.getStyleClass().add("card-content");
 
         Label titleLabel = new Label(e.title());
@@ -909,6 +957,9 @@ public class Controller implements ExerciseView {
         }
 
         // --- LAYOUT ASSEMBLY ---
+        HBox videoWrapper = new HBox(videoStack);
+        videoWrapper.setAlignment(Pos.CENTER);
+
         HBox infoRow = new HBox(12, categoryBadge, editCategoryCombo, titleLabel, titleField);
         infoRow.setAlignment(Pos.CENTER_LEFT);
         infoRow.setPadding(new Insets(16, 40, 12, 40));
@@ -921,7 +972,7 @@ public class Controller implements ExerciseView {
         VBox descBox = new VBox(5, descContent, descField);
         descBox.setPadding(new Insets(0, 40, 28, 40));
 
-        VBox innerLayout = new VBox(0, backRow, videoStack, infoRow, descBox);
+        VBox innerLayout = new VBox(0, backRow, videoWrapper, infoRow, descBox);
         innerLayout.setStyle("-fx-background-color: #f4f6f5;");
 
         ScrollPane scroll = new ScrollPane(innerLayout);
