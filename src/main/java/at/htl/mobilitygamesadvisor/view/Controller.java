@@ -97,15 +97,23 @@ public class Controller implements ExerciseView {
         // Suchfeld-Parent ist eine HBox in der FXML – wir fügen die ComboBox daneben ein
         HBox searchBar = (HBox) searchField.getParent();
 
+        searchField.setPrefHeight(40);
+        searchField.setMinHeight(40);
+
         categoryFilter = new ComboBox<>();
-        categoryFilter.setVisibleRowCount(8); // scrollbar ab 8 Einträgen
-        categoryFilter.getStyleClass().add("search-field");
+        categoryFilter.setVisibleRowCount(8);
         categoryFilter.setPrefWidth(200);
+        categoryFilter.setPrefHeight(40);
+        categoryFilter.setMinHeight(40);
         categoryFilter.setStyle(
                 "-fx-background-color: #ffffff;" +
-                        "-fx-border-color: #d8e4e0;" +
-                        "-fx-border-radius: 6px;" +
-                        "-fx-background-radius: 6px;"
+                "-fx-border-color: #d8e4e0;" +
+                "-fx-border-radius: 10;" +
+                "-fx-background-radius: 10;" +
+                "-fx-border-width: 1;" +
+                "-fx-font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;" +
+                "-fx-font-size: 13px;" +
+                "-fx-effect: dropshadow(gaussian, #1a2e2a18, 6, 0, 0, 2);"
         );
 
         refreshCategoryFilter();
@@ -114,7 +122,16 @@ public class Controller implements ExerciseView {
                 applyFilter()
         );
 
-        Button clearFilterBtn = buildSecondaryBtn("✖ Filter löschen");
+        String cfNormal = "-fx-background-color: transparent;-fx-text-fill: #2d7a5c;" +
+                "-fx-font-size: 13px;-fx-cursor: hand;-fx-padding: 10 16 10 16;" +
+                "-fx-border-color: #2d7a5c;-fx-border-radius: 10;-fx-border-width: 1;";
+        String cfHover  = "-fx-background-color: #2d7a5c18;-fx-text-fill: #2d7a5c;" +
+                "-fx-font-size: 13px;-fx-cursor: hand;-fx-padding: 10 16 10 16;" +
+                "-fx-border-color: #2d7a5c;-fx-border-radius: 10;-fx-border-width: 1;";
+        Button clearFilterBtn = new Button("✖ Filter löschen");
+        clearFilterBtn.setStyle(cfNormal);
+        clearFilterBtn.setOnMouseEntered(ev -> clearFilterBtn.setStyle(cfHover));
+        clearFilterBtn.setOnMouseExited(ev  -> clearFilterBtn.setStyle(cfNormal));
         clearFilterBtn.setOnAction(ev -> {
             categoryFilter.setValue(ALL_CATEGORIES);
         });
@@ -384,21 +401,26 @@ public class Controller implements ExerciseView {
 
         VBox card = new VBox(0);
         card.getStyleClass().add("exercise-card");
-        card.setPrefWidth(460);
-        card.setMaxWidth(460);
-        card.setStyle("-fx-pref-width: 460; -fx-max-width: 460;");
+        card.setPrefWidth(380);
+        card.setMaxWidth(380);
+        card.setStyle("-fx-pref-width: 380; -fx-max-width: 380;");
 
-        // — Header with gradient and count badge
+        // — Header with gradient and monogram
         StackPane cardHeader = new StackPane();
         cardHeader.setStyle(
-                "-fx-background-color: linear-gradient(to bottom right, #b8dece, #e8f4ef);" +
+                "-fx-background-color: linear-gradient(to bottom right, #c2dfd3, #eaf4f0);" +
                 "-fx-background-radius: 14 14 0 0;" +
-                "-fx-min-height: 120px; -fx-pref-height: 120px;" +
-                "-fx-border-color: #dceae5; -fx-border-width: 0 0 1 0;");
-        cardHeader.setPrefHeight(120);
+                "-fx-min-height: 96px; -fx-pref-height: 96px;" +
+                "-fx-border-color: #d5e9e2; -fx-border-width: 0 0 1 0;");
+        cardHeader.setPrefHeight(96);
 
-        Label folderIcon = new Label("📁");
-        folderIcon.setStyle("-fx-font-size: 52px;");
+        // Monogram: first letter of the title
+        String initial = s.title().isEmpty() ? "?" : s.title().substring(0, 1).toUpperCase();
+        Label monogram = new Label(initial);
+        monogram.setStyle(
+                "-fx-font-size: 40px; -fx-font-weight: bold;" +
+                "-fx-text-fill: rgba(45,122,92,0.28);" +
+                "-fx-font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;");
 
         Label countBadge = new Label(count + (count == 1 ? " Übung" : " Übungen"));
         countBadge.setStyle(
@@ -409,17 +431,17 @@ public class Controller implements ExerciseView {
         StackPane.setAlignment(countBadge, Pos.TOP_RIGHT);
         StackPane.setMargin(countBadge, new Insets(12, 12, 0, 0));
 
-        cardHeader.getChildren().addAll(folderIcon, countBadge);
+        cardHeader.getChildren().addAll(monogram, countBadge);
 
         // — Content
-        VBox content = new VBox(10);
+        VBox content = new VBox(8);
         content.getStyleClass().add("card-content");
         content.setPadding(new Insets(14, 16, 16, 16));
 
         Label titleLabel = new Label(s.title());
         titleLabel.getStyleClass().add("card-title");
         titleLabel.setWrapText(true);
-        titleLabel.setStyle("-fx-font-size: 15px;");
+        titleLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
 
         TextField renameField = new TextField(s.title());
         renameField.getStyleClass().add("search-field");
@@ -694,6 +716,7 @@ public class Controller implements ExerciseView {
 
         if (searchField.getParent() instanceof HBox parentBox) {
             Button addVideoBtn = buildActionBtn("+ Neue Übung");
+            addVideoBtn.setPrefHeight(40);
 
             addVideoBtn.setOnAction(e -> {
                 StackPane root = (StackPane) paneExercises.getParent();
@@ -744,6 +767,13 @@ public class Controller implements ExerciseView {
             }
         }
 
+        javafx.scene.layout.Region hoverOverlay = new javafx.scene.layout.Region();
+        hoverOverlay.setStyle("-fx-background-color: rgba(0,0,0,0.10); -fx-background-radius: 14 14 0 0;");
+        hoverOverlay.setMouseTransparent(true);
+        hoverOverlay.setVisible(false);
+        imagePlaceholder.getChildren().add(hoverOverlay);
+        imagePlaceholder.setOnMouseEntered(ev -> hoverOverlay.setVisible(true));
+        imagePlaceholder.setOnMouseExited(ev -> hoverOverlay.setVisible(false));
         imagePlaceholder.setOnMouseClicked(event -> openDetailInPane(e, paneExercises, btnExercises));
         VBox content = new VBox(8);
         content.setOnMouseClicked(event -> openDetailInPane(e, paneExercises, btnExercises));
@@ -814,28 +844,22 @@ public class Controller implements ExerciseView {
         disposeCurrentPlayer(); // Standard cleanup
         paneDetail.getChildren().clear();
 
-        // --- BUTTON STYLES ---
-        String styleNormal = "-fx-background-color: transparent;-fx-text-fill: #2d7a5c;" +
-                "-fx-font-size: 14px;-fx-cursor: hand;-fx-border-color: #2d7a5c;" +
-                "-fx-border-radius: 6px;-fx-padding: 8 16 8 16;";
-        String styleHover  = "-fx-background-color: #2d7a5c18;-fx-text-fill: #2d7a5c;" +
-                "-fx-font-size: 14px;-fx-cursor: hand;-fx-border-color: #2d7a5c;" +
-                "-fx-border-radius: 6px;-fx-padding: 8 16 8 16;";
-
-        // --- BACK BUTTON ---
-        Button backBtn = new Button("← Zurück zur Übersicht");
-        backBtn.getStyleClass().add("video-ctrl-btn");
-        backBtn.setStyle(styleNormal);
-        backBtn.setOnMouseEntered(ev -> backBtn.setStyle(styleHover));
-        backBtn.setOnMouseExited(ev  -> backBtn.setStyle(styleNormal));
+        // --- BACK BUTTON (Overlay oben links im Video) ---
+        String backBase  = "-fx-background-color: rgba(0,0,0,0.45);-fx-text-fill: white;" +
+                "-fx-font-size: 15px;-fx-cursor: hand;-fx-background-radius: 6px;" +
+                "-fx-padding: 6 12 6 12;-fx-border-width: 0;";
+        String backHover = "-fx-background-color: rgba(0,0,0,0.68);-fx-text-fill: white;" +
+                "-fx-font-size: 15px;-fx-cursor: hand;-fx-background-radius: 6px;" +
+                "-fx-padding: 6 12 6 12;-fx-border-width: 0;";
+        Button backBtn = new Button("←");
+        backBtn.setStyle(backBase);
+        backBtn.setOnMouseEntered(ev -> backBtn.setStyle(backHover));
+        backBtn.setOnMouseExited(ev  -> backBtn.setStyle(backBase));
         backBtn.setOnAction(ev -> {
             hideDetailPane();
             if (returnPane == paneCollection) buildCollectionPane();
             switchPage(returnPane, returnBtn);
         });
-
-        HBox backRow = new HBox(backBtn);
-        backRow.setPadding(new Insets(28, 40, 8, 40));
 
         // --- TITLE & DESCRIPTION DISPLAY ---
         Label titleLabel = new Label(e.title());
@@ -848,8 +872,11 @@ public class Controller implements ExerciseView {
         descContent.getStyleClass().add("detail-description");
         descContent.setWrapText(true);
 
-        Label categoryBadge = new Label(e.category());
-        categoryBadge.getStyleClass().add("card-tag");
+        Label categoryBadge = new Label(e.category() != null ? e.category() : "Unkategorisiert");
+        categoryBadge.setStyle(
+                "-fx-background-color: #e8f4ef; -fx-text-fill: #2d7a5c;" +
+                "-fx-font-size: 13px; -fx-font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;" +
+                "-fx-padding: 6 14 6 14; -fx-background-radius: 6;");
 
         // --- EDIT FIELDS ---
         TextField titleField = new TextField(e.title());
@@ -941,38 +968,96 @@ public class Controller implements ExerciseView {
         currentPlayer = new VideoPlayerView(e.videoUrl(), videoFitW, videoFitH);
 
         StackPane videoStack = new StackPane(currentPlayer);
+
+        // Back-Button Overlay oben links
+        StackPane.setAlignment(backBtn, Pos.TOP_LEFT);
+        StackPane.setMargin(backBtn, new Insets(12, 0, 0, 12));
+        videoStack.getChildren().add(backBtn);
+
         if (hasNav) {
+            java.util.List<Button> navBtns = new java.util.ArrayList<>();
             if (navIndex > 0) {
                 Button prevArrow = buildArrowOverlayBtn("❮");
                 StackPane.setAlignment(prevArrow, Pos.CENTER_LEFT);
+                StackPane.setMargin(prevArrow, new Insets(0, 0, 0, 10));
                 prevArrow.setOnAction(ev -> openDetailInPane(navList.get(navIndex - 1), returnPane, returnBtn, navList, navIndex - 1));
+                prevArrow.setVisible(false);
                 videoStack.getChildren().add(prevArrow);
+                navBtns.add(prevArrow);
             }
             if (navIndex < navList.size() - 1) {
                 Button nextArrow = buildArrowOverlayBtn("❯");
                 StackPane.setAlignment(nextArrow, Pos.CENTER_RIGHT);
+                StackPane.setMargin(nextArrow, new Insets(0, 10, 0, 0));
                 nextArrow.setOnAction(ev -> openDetailInPane(navList.get(navIndex + 1), returnPane, returnBtn, navList, navIndex + 1));
+                nextArrow.setVisible(false);
                 videoStack.getChildren().add(nextArrow);
+                navBtns.add(nextArrow);
             }
+            videoStack.setOnMouseEntered(ev -> navBtns.forEach(b -> b.setVisible(true)));
+            videoStack.setOnMouseExited(ev  -> navBtns.forEach(b -> b.setVisible(false)));
         }
 
         // --- LAYOUT ASSEMBLY ---
         HBox videoWrapper = new HBox(videoStack);
         videoWrapper.setAlignment(Pos.CENTER);
 
-        HBox infoRow = new HBox(12, categoryBadge, editCategoryCombo, titleLabel, titleField);
+        Label titlePrefix = new Label("Titel:");
+        titlePrefix.setStyle("-fx-text-fill: #8aada8; -fx-font-size: 13px;");
+
+        HBox titleGroup = new HBox(8, titlePrefix, titleLabel, titleField);
+        titleGroup.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(titleGroup, Priority.ALWAYS);
+
+
+        // Sammelmappe-Button (Kontextmenü wie in der Übersicht)
+        String btnNormal = "-fx-background-color: transparent;-fx-text-fill: #2d7a5c;" +
+                "-fx-font-size: 13px;-fx-cursor: hand;-fx-padding: 6 14 6 14;" +
+                "-fx-border-color: #2d7a5c;-fx-border-radius: 6px;-fx-border-width: 1;";
+        String btnAdded = "-fx-background-color: #e8f4ef;-fx-text-fill: #2d7a5c;" +
+                "-fx-font-size: 13px;-fx-cursor: hand;-fx-padding: 6 14 6 14;" +
+                "-fx-border-color: #5cad8a;-fx-border-radius: 6px;-fx-border-width: 1;";
+        boolean initAdded = sammlungRepo.isInAnySammlung(e.id());
+        Button detailCollBtn = new Button(initAdded ? "✔ Sammelmappe" : "+ Sammelmappe");
+        detailCollBtn.setStyle(initAdded ? btnAdded : btnNormal);
+        detailCollBtn.setOnAction(ev -> {
+            List<Sammlung> sammlungen = sammlungRepo.getAll();
+            if (sammlungen.isEmpty()) return;
+            ContextMenu menu = new ContextMenu();
+            for (Sammlung s : sammlungen) {
+                boolean inThis = sammlungRepo.containsExercise(s.id(), e.id());
+                MenuItem item = new MenuItem((inThis ? "✔ " : "+ ") + s.title());
+                item.setOnAction(mev -> {
+                    boolean currentlyIn = sammlungRepo.containsExercise(s.id(), e.id());
+                    if (currentlyIn) sammlungRepo.removeExercise(s.id(), e.id());
+                    else             sammlungRepo.addExercise(s.id(), e.id());
+                    boolean nowIn = sammlungRepo.isInAnySammlung(e.id());
+                    detailCollBtn.setText(nowIn ? "✔ Sammelmappe" : "+ Sammelmappe");
+                    detailCollBtn.setStyle(nowIn ? btnAdded : btnNormal);
+                });
+                menu.getItems().add(item);
+            }
+            menu.show(detailCollBtn, Side.BOTTOM, 0, 0);
+        });
+
+        HBox actionGroup = new HBox(8, detailCollBtn, editBtn, saveEditBtn, cancelEditBtn, editSavedLabel, categoryBadge, editCategoryCombo);
+        actionGroup.setAlignment(Pos.CENTER_LEFT);
+
+        HBox infoRow = new HBox(16, titleGroup, actionGroup);
         infoRow.setAlignment(Pos.CENTER_LEFT);
         infoRow.setPadding(new Insets(16, 40, 12, 40));
 
-        User currentUser = UserSession.getInstance().getUser();
-        if (currentUser != null && e.uploadedBy() == currentUser.getId()) {
-            infoRow.getChildren().addAll(editBtn, saveEditBtn, cancelEditBtn, editSavedLabel);
-        }
+        Label descPrefix = new Label("Beschreibung:");
+        descPrefix.setStyle("-fx-text-fill: #8aada8; -fx-font-size: 12px;");
 
-        VBox descBox = new VBox(5, descContent, descField);
+        VBox descBox = new VBox(4, descPrefix, descContent, descField);
         descBox.setPadding(new Insets(0, 40, 28, 40));
 
-        VBox innerLayout = new VBox(0, backRow, videoWrapper, infoRow, descBox);
+        Separator infoSep = new Separator();
+        VBox.setMargin(infoSep, new Insets(0, 40, 12, 40));
+
+        VBox innerLayout = new VBox(0, videoWrapper, infoRow, infoSep, descBox);
+        innerLayout.setPadding(new Insets(24, 0, 0, 0));
         innerLayout.setStyle("-fx-background-color: #f4f6f5;");
 
         ScrollPane scroll = new ScrollPane(innerLayout);

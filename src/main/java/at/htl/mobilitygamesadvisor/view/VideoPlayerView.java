@@ -68,8 +68,27 @@ public class VideoPlayerView extends VBox {
         StackPane.setMargin(rewindBtn, new Insets(0, 0, 14, 14));
         StackPane.setMargin(forwardBtn, new Insets(0, 14, 14, 0));
 
+        // ── Restart-Button (erscheint wenn Video zu Ende) ────────────────────
+        Button restartBtn = new Button("↺");
+        restartBtn.setStyle(
+                "-fx-background-color: rgba(0,0,0,0.55); -fx-text-fill: white;" +
+                "-fx-font-size: 40px; -fx-cursor: hand;" +
+                "-fx-background-radius: 50%; -fx-padding: 12 18 12 18; -fx-border-width: 0;");
+        restartBtn.setVisible(false);
+        StackPane.setAlignment(restartBtn, Pos.CENTER);
+
         // ── Video area with rounded corners ──────────────────────────────────
-        StackPane videoArea = new StackPane(videoImageView, loadingSpinner, rewindBtn, forwardBtn);
+        StackPane videoArea = new StackPane(videoImageView, loadingSpinner, rewindBtn, forwardBtn, restartBtn);
+
+        restartBtn.setOnAction(ev -> {
+            restartBtn.setVisible(false);
+            mediaPlayer.controls().setTime(0);
+            mediaPlayer.controls().play();
+            if (videoArea.isHover()) {
+                rewindBtn.setVisible(true);
+                forwardBtn.setVisible(true);
+            }
+        });
 
         // Bind clip directly to the videoArea's actual rendered size → true rounded corners
         Rectangle clip = new Rectangle();
@@ -79,9 +98,15 @@ public class VideoPlayerView extends VBox {
         clip.heightProperty().bind(videoArea.heightProperty());
         videoArea.setClip(clip);
 
-        // Click on video = play/pause (buttons consume their own click, won't bubble here)
+        // Klick aufs Video: wenn fertig → Neustart, sonst play/pause
         videoArea.setOnMouseClicked(ev -> {
-            if (mediaPlayer.status().isPlaying()) {
+            if (restartBtn.isVisible()) {
+                restartBtn.setVisible(false);
+                mediaPlayer.controls().setTime(0);
+                mediaPlayer.controls().play();
+                rewindBtn.setVisible(true);
+                forwardBtn.setVisible(true);
+            } else if (mediaPlayer.status().isPlaying()) {
                 mediaPlayer.controls().pause();
             } else {
                 mediaPlayer.controls().play();
@@ -90,8 +115,10 @@ public class VideoPlayerView extends VBox {
 
         // Show/hide hover buttons via hoverProperty (stays true while cursor is over any child)
         videoArea.hoverProperty().addListener((obs, wasHovering, isHovering) -> {
-            rewindBtn.setVisible(isHovering);
-            forwardBtn.setVisible(isHovering);
+            if (!restartBtn.isVisible()) {
+                rewindBtn.setVisible(isHovering);
+                forwardBtn.setVisible(isHovering);
+            }
         });
 
         // ── Timeline Slider ──────────────────────────────────────────────────
@@ -120,6 +147,15 @@ public class VideoPlayerView extends VBox {
             @Override
             public void buffering(MediaPlayer mp, float newCache) {
                 Platform.runLater(() -> loadingSpinner.setVisible(newCache < 100f));
+            }
+            @Override
+            public void finished(MediaPlayer mp) {
+                Platform.runLater(() -> {
+                    restartBtn.setVisible(true);
+                    rewindBtn.setVisible(false);
+                    forwardBtn.setVisible(false);
+                    timeline.setValue(1);
+                });
             }
             @Override
             public void error(MediaPlayer mediaPlayer) {

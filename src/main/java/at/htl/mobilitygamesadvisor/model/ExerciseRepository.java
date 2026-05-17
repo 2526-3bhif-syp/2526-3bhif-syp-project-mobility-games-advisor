@@ -96,15 +96,12 @@ public class ExerciseRepository {
         return list;
     }
     public void update(int id, String title, String desc, String category) {
-        String sql = "UPDATE exercises SET title = ?, description = ?, category = ? WHERE id = ? AND uploaded_by = ?";
+        String sql = "UPDATE exercises SET title = ?, description = ?, category = ? WHERE id = ?";
         try (PreparedStatement ps = DatabaseConnection.get().prepareStatement(sql)) {
             ps.setString(1, title);
             ps.setString(2, desc);
             ps.setString(3, category);
             ps.setInt(4, id);
-            Integer uid = userId();
-            if (uid != null) ps.setInt(5, uid);
-            else             ps.setNull(5, Types.INTEGER);
             ps.executeUpdate();
         } catch (SQLException e) { e.printStackTrace(); }
     }
