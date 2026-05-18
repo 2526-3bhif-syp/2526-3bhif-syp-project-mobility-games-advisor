@@ -407,12 +407,18 @@ public class Controller implements ExerciseView {
 
         // — Header with gradient and monogram
         StackPane cardHeader = new StackPane();
-        cardHeader.setStyle(
-                "-fx-background-color: linear-gradient(to bottom right, #c2dfd3, #eaf4f0);" +
+        String chNormal = "-fx-background-color: linear-gradient(to bottom right, #c2dfd3, #eaf4f0);" +
                 "-fx-background-radius: 14 14 0 0;" +
                 "-fx-min-height: 96px; -fx-pref-height: 96px;" +
-                "-fx-border-color: #d5e9e2; -fx-border-width: 0 0 1 0;");
+                "-fx-border-color: #d5e9e2; -fx-border-width: 0 0 1 0;";
+        String chHover  = "-fx-background-color: linear-gradient(to bottom right, #a8d4c5, #d0eae5);" +
+                "-fx-background-radius: 14 14 0 0;" +
+                "-fx-min-height: 96px; -fx-pref-height: 96px;" +
+                "-fx-border-color: #5cad8a80; -fx-border-width: 0 0 1 0;";
+        cardHeader.setStyle(chNormal);
         cardHeader.setPrefHeight(96);
+        card.setOnMouseEntered(ev -> cardHeader.setStyle(chHover));
+        card.setOnMouseExited(ev  -> cardHeader.setStyle(chNormal));
 
         // Monogram: first letter of the title
         String initial = s.title().isEmpty() ? "?" : s.title().substring(0, 1).toUpperCase();
@@ -525,7 +531,18 @@ public class Controller implements ExerciseView {
         paneCollection.setSpacing(20);
         paneCollection.setPadding(new Insets(30, 40, 30, 40));
 
-        Button backBtn = buildSecondaryBtn("← Alle Sammelmappen");
+        String backBase  = "-fx-background-color: #f0f8f5;-fx-text-fill: #2d7a5c;" +
+                "-fx-font-size: 16px;-fx-cursor: hand;-fx-background-radius: 20;" +
+                "-fx-padding: 5 14 5 14;-fx-border-color: #c0ddd4;" +
+                "-fx-border-radius: 20;-fx-border-width: 1;";
+        String backHover = "-fx-background-color: #e0f0ea;-fx-text-fill: #2d7a5c;" +
+                "-fx-font-size: 16px;-fx-cursor: hand;-fx-background-radius: 20;" +
+                "-fx-padding: 5 14 5 14;-fx-border-color: #5cad8a;" +
+                "-fx-border-radius: 20;-fx-border-width: 1;";
+        Button backBtn = new Button("←");
+        backBtn.setStyle(backBase);
+        backBtn.setOnMouseEntered(ev -> backBtn.setStyle(backHover));
+        backBtn.setOnMouseExited(ev  -> backBtn.setStyle(backBase));
         backBtn.setOnAction(ev -> { openSammlungId = null; buildCollectionPane(); });
 
         Label header = new Label(s.title());
@@ -557,14 +574,13 @@ public class Controller implements ExerciseView {
         HBox topRow = new HBox(12, countLabel, clearBtn);
         topRow.setAlignment(Pos.CENTER_LEFT);
 
-        javafx.scene.layout.FlowPane grid = new javafx.scene.layout.FlowPane();
-        grid.setHgap(16);
-        grid.setVgap(16);
+        VBox list = new VBox(8);
+        list.setMaxWidth(Double.MAX_VALUE);
         for (int i = 0; i < exercises.size(); i++) {
-            grid.getChildren().add(buildCollectionCard(exercises.get(i), sammlungId, exercises, i));
+            list.getChildren().add(buildCollectionCard(exercises.get(i), sammlungId, exercises, i));
         }
 
-        ScrollPane scroll = new ScrollPane(grid);
+        ScrollPane scroll = new ScrollPane(list);
         scroll.setFitToWidth(true);
         scroll.getStyleClass().add("transparent-scroll");
         scroll.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
@@ -573,47 +589,93 @@ public class Controller implements ExerciseView {
         paneCollection.getChildren().addAll(backBtn, header, sep, topRow, scroll);
     }
 
-    private VBox buildCollectionCard(Exercise e, int sammlungId, List<Exercise> allExercises, int index) {
-        VBox card = new VBox(0);
-        card.getStyleClass().add("exercise-card");
+    private HBox buildCollectionCard(Exercise e, int sammlungId, List<Exercise> allExercises, int index) {
+        String rowNormal = "-fx-background-color: #ffffff;" +
+                "-fx-background-radius: 10;-fx-border-color: #e0ece8;" +
+                "-fx-border-radius: 10;-fx-border-width: 1;-fx-cursor: hand;";
+        String rowHover  = "-fx-background-color: #f7faf9;" +
+                "-fx-background-radius: 10;-fx-border-color: #5cad8a60;" +
+                "-fx-border-radius: 10;-fx-border-width: 1;-fx-cursor: hand;";
 
-        // — Placeholder area (same as exercise cards)
-        StackPane imagePlaceholder = new StackPane();
-        imagePlaceholder.getStyleClass().add("card-image-placeholder");
-        imagePlaceholder.setPrefHeight(120);
+        HBox row = new HBox(0);
+        row.setStyle(rowNormal);
+        row.setMaxWidth(Double.MAX_VALUE);
+        row.setOnMouseEntered(ev -> row.setStyle(rowHover));
+        row.setOnMouseExited(ev  -> row.setStyle(rowNormal));
+
+        // — Thumbnail with number badge (top-left)
+        StackPane thumb = new StackPane();
+        thumb.setPrefSize(120, 80);
+        thumb.setMinSize(120, 80);
+        thumb.setMaxSize(120, 80);
+        thumb.setStyle(
+                "-fx-background-color: linear-gradient(to bottom right, #2d7a5c, #5cad8a);" +
+                "-fx-background-radius: 10 0 0 10;");
+
         Label playIcon = new Label("▶");
-        playIcon.setStyle("-fx-text-fill: #5cad8a; -fx-font-size: 28px;");
-        imagePlaceholder.getChildren().add(playIcon);
-        imagePlaceholder.setOnMouseClicked(ev ->
-                openDetailInPane(e, paneCollection, btnCollection, allExercises, index));
+        playIcon.setStyle("-fx-text-fill: rgba(255,255,255,0.75); -fx-font-size: 22px;");
 
-        // — Content
-        VBox content = new VBox(8);
-        content.getStyleClass().add("card-content");
-        content.setOnMouseClicked(ev ->
-                openDetailInPane(e, paneCollection, btnCollection, allExercises, index));
+        Label numBadge = new Label(String.valueOf(index + 1));
+        numBadge.setStyle(
+                "-fx-background-color: rgba(0,0,0,0.38);-fx-text-fill: white;" +
+                "-fx-font-size: 11px;-fx-font-weight: bold;" +
+                "-fx-padding: 2 6 2 6;-fx-background-radius: 8;");
+        StackPane.setAlignment(numBadge, Pos.TOP_LEFT);
+        StackPane.setMargin(numBadge, new Insets(7, 0, 0, 7));
+
+        thumb.getChildren().addAll(playIcon, numBadge);
+
+        // — Info section
+        VBox info = new VBox(4);
+        info.setPadding(new Insets(10, 12, 10, 14));
+        info.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(info, Priority.ALWAYS);
 
         Label titleLabel = new Label(e.title());
-        titleLabel.getStyleClass().add("card-title");
+        titleLabel.setStyle(
+                "-fx-font-weight: bold;-fx-font-size: 13px;-fx-text-fill: #1a2e2a;" +
+                "-fx-font-family: 'Segoe UI Semibold', 'Helvetica Neue', sans-serif;");
         titleLabel.setWrapText(true);
 
-        Label tagLabel = new Label(e.category() != null ? e.category() : "Unkategorisiert");
-        tagLabel.getStyleClass().add("card-tag");
+        String descText = (e.desc() != null && !e.desc().isBlank()) ? e.desc() : "";
+        Label descLabel = new Label(descText.isEmpty()
+                ? (e.category() != null ? e.category() : "Unkategorisiert") : descText);
+        descLabel.setStyle(
+                "-fx-font-size: 11px;-fx-text-fill: #8aada8;" +
+                "-fx-font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;");
+        descLabel.setWrapText(true);
+        descLabel.setMaxHeight(32);
 
-        String btnNormal = "-fx-background-color: transparent;-fx-text-fill: #2d7a5c;" +
-                "-fx-font-size: 11px;-fx-cursor: hand;-fx-padding: 4 8 4 8;" +
-                "-fx-border-color: #c0392b;-fx-border-radius: 6px;-fx-border-width: 1;-fx-text-fill: #c0392b;";
+        Label catTag = new Label(e.category() != null ? e.category() : "Unkategorisiert");
+        catTag.getStyleClass().add("card-tag");
+
+        String rmNormal = "-fx-background-color: transparent;-fx-text-fill: #c0392b;" +
+                "-fx-font-size: 11px;-fx-cursor: hand;-fx-padding: 2 6 2 6;" +
+                "-fx-border-color: transparent;-fx-background-radius: 4;";
+        String rmHover  = "-fx-background-color: #c0392b18;-fx-text-fill: #c0392b;" +
+                "-fx-font-size: 11px;-fx-cursor: hand;-fx-padding: 2 6 2 6;" +
+                "-fx-border-color: #c0392b;-fx-border-radius: 4;-fx-border-width: 1;";
         Button removeBtn = new Button("✖ Entfernen");
-        removeBtn.setStyle(btnNormal);
+        removeBtn.setStyle(rmNormal);
+        removeBtn.setOnMouseEntered(ev -> removeBtn.setStyle(rmHover));
+        removeBtn.setOnMouseExited(ev  -> removeBtn.setStyle(rmNormal));
         removeBtn.setOnAction(ev -> {
             sammlungRepo.removeExercise(sammlungId, e.id());
             buildCollectionPane();
             applyFilter();
         });
 
-        content.getChildren().addAll(titleLabel, tagLabel, removeBtn);
-        card.getChildren().addAll(imagePlaceholder, content);
-        return card;
+        HBox bottomRow = new HBox(8, catTag, removeBtn);
+        bottomRow.setAlignment(Pos.CENTER_LEFT);
+
+        info.getChildren().addAll(titleLabel, descLabel, bottomRow);
+
+        Runnable open = () -> openDetailInPane(e, paneCollection, btnCollection, allExercises, index);
+        thumb.setOnMouseClicked(ev -> open.run());
+        info.setOnMouseClicked(ev -> open.run());
+
+        row.getChildren().addAll(thumb, info);
+        return row;
     }
 
     // —— Button-Hilfsmethoden —————————————————————————————————————————————————
