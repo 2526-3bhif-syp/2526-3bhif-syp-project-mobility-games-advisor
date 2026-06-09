@@ -154,8 +154,8 @@
     -fx-border-width: 1;
     -fx-effect: dropshadow(gaussian, #1a2e2a1a, 14, 0, 0, 3);
     -fx-cursor: hand;
-    -fx-pref-width: 220;
-    -fx-max-width: 220;
+    -fx-pref-width: 280;
+    -fx-max-width: 280;
 }
 
 .exercise-card:hover {
@@ -165,10 +165,10 @@
 }
 
 .card-image-placeholder {
-    -fx-background-color: #edf4f1;
+    -fx-background-color: #d8ece4;
     -fx-background-radius: 14 14 0 0;
-    -fx-pref-height: 120;
-    -fx-min-height: 120;
+    -fx-pref-height: 165;
+    -fx-min-height: 165;
     -fx-border-color: #dceae5;
     -fx-border-width: 0 0 1 0;
 }
@@ -186,14 +186,14 @@
 .card-title {
     -fx-text-fill: #1a2e2a;
     -fx-font-family: "Segoe UI Semibold", "Helvetica Neue", sans-serif;
-    -fx-font-size: 14px;
+    -fx-font-size: 15px;
     -fx-font-weight: bold;
 }
 
 .card-description {
     -fx-text-fill: #8aada8;
     -fx-font-family: "Segoe UI", "Helvetica Neue", sans-serif;
-    -fx-font-size: 12px;
+    -fx-font-size: 13px;
     -fx-wrap-text: true;
     -fx-line-spacing: 2;
 }

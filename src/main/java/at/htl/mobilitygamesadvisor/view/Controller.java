@@ -22,11 +22,20 @@ import javafx.geometry.Rectangle2D;
 import javafx.geometry.Side;
 import javafx.stage.Screen;
 
-import javafx.scene.media.Media;
-import javafx.scene.media.MediaPlayer;
-import javafx.scene.media.MediaView;
+import javafx.application.Platform;
+import javafx.scene.effect.DropShadow;
+import javafx.scene.image.ImageView;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.CycleMethod;
+import javafx.scene.paint.LinearGradient;
+import javafx.scene.paint.Stop;
+import javafx.scene.shape.Circle;
+import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
-import javafx.util.Duration;
+import at.htl.mobilitygamesadvisor.model.ThumbnailService;
+import uk.co.caprica.vlcj.factory.MediaPlayerFactory;
+import uk.co.caprica.vlcj.player.embedded.EmbeddedMediaPlayer;
+import uk.co.caprica.vlcj.javafx.videosurface.ImageViewVideoSurface;
 
 /**
  * VIEW (JavaFX Controller) – purely responsible for rendering.
@@ -54,6 +63,13 @@ public class Controller implements ExerciseView {
     private final ExerciseRepository  exerciseRepo  = new ExerciseRepository();
     private final SammlungRepository  sammlungRepo  = new SammlungRepository();
     private Integer openSammlungId = null;
+
+    // —— Hover-Preview (shared single player) ————————————————————————————————
+    private MediaPlayerFactory previewFactory;
+    private EmbeddedMediaPlayer previewPlayer;
+    private ImageView previewImageView;
+    private StackPane activePreviewPane;
+    private Thread previewAutoStopThread;
 
     // —— MVP wiring ————————————————————————————————————————————————————————————
 
@@ -733,6 +749,10 @@ public class Controller implements ExerciseView {
     @Override
     public void showExercises(List<Exercise> exercises) {
         if (exerciseGrid == null) return;
+        if (previewPlayer != null) {
+            previewPlayer.controls().stop();
+            activePreviewPane = null;
+        }
         exerciseGrid.getChildren().clear();
         exercises.forEach(this::addExerciseCard);
     }
@@ -799,43 +819,69 @@ public class Controller implements ExerciseView {
 
         StackPane imagePlaceholder = new StackPane();
         imagePlaceholder.getStyleClass().add("card-image-placeholder");
-        imagePlaceholder.setPrefHeight(120);
+        imagePlaceholder.setPrefHeight(165);
+
+        // Clip to rounded top corners so thumbnail/video fills edge-to-edge
+        Rectangle cardClip = new Rectangle();
+        cardClip.setArcWidth(14);
+        cardClip.setArcHeight(14);
+        cardClip.widthProperty().bind(imagePlaceholder.widthProperty());
+        cardClip.heightProperty().bind(imagePlaceholder.heightProperty());
+        imagePlaceholder.setClip(cardClip);
+
+        // Thumbnail: cover mode — fills width, height overflow is clipped
+        ImageView thumbnailView = new ImageView();
+        thumbnailView.setFitWidth(280);
+        thumbnailView.setFitHeight(9999);
+        thumbnailView.setPreserveRatio(true);
+        thumbnailView.setSmooth(true);
+        imagePlaceholder.getChildren().add(thumbnailView);
 
         if (e.videoUrl() != null && !e.videoUrl().isBlank()) {
-            try {
-                Media media = new Media(e.videoUrl());
-                MediaPlayer player = new MediaPlayer(media);
-
-                MediaView thumbnail = new MediaView(player);
-                thumbnail.setFitWidth(220);
-                thumbnail.setFitHeight(120);
-                thumbnail.setPreserveRatio(false);
-
-                Label playIcon = new Label("▶");
-                playIcon.setStyle(
-                        "-fx-text-fill: white; -fx-font-size: 28px;" +
-                                "-fx-effect: dropshadow(gaussian, black, 8, 0, 0, 0);"
-                );
-
-                // Wait until media is ready, THEN seek to first frame
-                player.setOnReady(() -> {
-                    player.seek(Duration.ZERO);
-                    player.pause();
-                });
-
-                imagePlaceholder.getChildren().addAll(thumbnail, playIcon);
-            } catch (Exception ex) {
-                imagePlaceholder.getChildren().add(new Label("▶ VIDEO"));
-            }
+            ThumbnailService.loadAsync(e.videoUrl(), img -> {
+                if (img != null) thumbnailView.setImage(img);
+            });
         }
 
-        javafx.scene.layout.Region hoverOverlay = new javafx.scene.layout.Region();
-        hoverOverlay.setStyle("-fx-background-color: rgba(0,0,0,0.10); -fx-background-radius: 14 14 0 0;");
-        hoverOverlay.setMouseTransparent(true);
-        hoverOverlay.setVisible(false);
-        imagePlaceholder.getChildren().add(hoverOverlay);
-        imagePlaceholder.setOnMouseEntered(ev -> hoverOverlay.setVisible(true));
-        imagePlaceholder.setOnMouseExited(ev -> hoverOverlay.setVisible(false));
+        // Gradient overlay: transparent → dark at bottom
+        Rectangle gradient = new Rectangle();
+        gradient.widthProperty().bind(imagePlaceholder.widthProperty());
+        gradient.heightProperty().bind(imagePlaceholder.heightProperty());
+        gradient.setFill(new LinearGradient(0, 0, 0, 1, true, CycleMethod.NO_CYCLE,
+                new Stop(0.35, Color.TRANSPARENT),
+                new Stop(1.0,  Color.rgb(10, 40, 30, 0.55))));
+        gradient.setMouseTransparent(true);
+
+        // Play button: frosted white circle
+        Circle playCircle = new Circle(20, Color.rgb(255, 255, 255, 0.88));
+        playCircle.setEffect(new DropShadow(8, Color.rgb(0, 0, 0, 0.25)));
+        Label playArrow = new Label("▶");
+        playArrow.setStyle("-fx-text-fill: #1e6648; -fx-font-size: 13px; -fx-padding: 0 0 0 2;");
+        StackPane playBtn = new StackPane(playCircle, playArrow);
+        playBtn.setMouseTransparent(true);
+
+        // Hover darkening (replaces old hoverOverlay)
+        Rectangle hoverDarken = new Rectangle();
+        hoverDarken.widthProperty().bind(imagePlaceholder.widthProperty());
+        hoverDarken.heightProperty().bind(imagePlaceholder.heightProperty());
+        hoverDarken.setFill(Color.rgb(0, 0, 0, 0.18));
+        hoverDarken.setMouseTransparent(true);
+        hoverDarken.setVisible(false);
+
+        imagePlaceholder.getChildren().addAll(gradient, playBtn, hoverDarken);
+
+        if (e.videoUrl() != null && !e.videoUrl().isBlank()) {
+            imagePlaceholder.setOnMouseEntered(ev -> {
+                playBtn.setVisible(false);
+                hoverDarken.setVisible(true);
+                startPreview(imagePlaceholder, e.videoUrl());
+            });
+            imagePlaceholder.setOnMouseExited(ev -> {
+                playBtn.setVisible(true);
+                hoverDarken.setVisible(false);
+                stopPreview(imagePlaceholder);
+            });
+        }
         imagePlaceholder.setOnMouseClicked(event -> openDetailInPane(e, paneExercises, btnExercises));
         VBox content = new VBox(8);
         content.setOnMouseClicked(event -> openDetailInPane(e, paneExercises, btnExercises));
@@ -1148,6 +1194,58 @@ public class Controller implements ExerciseView {
         if (currentPlayer != null) {
             currentPlayer.dispose();
             currentPlayer = null;
+        }
+    }
+
+    // —— Hover-Preview ————————————————————————————————————————————————————————
+
+    private void initPreviewPlayer() {
+        if (previewFactory != null) return;
+        previewFactory = new MediaPlayerFactory(
+                "--no-audio", "--avcodec-hw=none", "--demux=avformat", "--avcodec-threads=1");
+        previewPlayer = previewFactory.mediaPlayers().newEmbeddedMediaPlayer();
+        previewImageView = new ImageView();
+        previewImageView.setFitWidth(280);
+        previewImageView.setFitHeight(9999);
+        previewImageView.setPreserveRatio(true);
+        previewImageView.setSmooth(true);
+        previewPlayer.videoSurface().set(new ImageViewVideoSurface(previewImageView));
+    }
+
+    private void startPreview(StackPane pane, String videoUrl) {
+        initPreviewPlayer();
+
+        if (previewAutoStopThread != null) previewAutoStopThread.interrupt();
+
+        if (activePreviewPane != null && activePreviewPane != pane) {
+            previewPlayer.controls().stop();
+            activePreviewPane.getChildren().remove(previewImageView);
+        }
+
+        activePreviewPane = pane;
+        previewImageView.setFitWidth(pane.getWidth() > 0 ? pane.getWidth() : 220);
+        previewImageView.setFitHeight(pane.getHeight() > 0 ? pane.getHeight() : 120);
+
+        if (!pane.getChildren().contains(previewImageView)) {
+            // Insert at index 1: after thumbnailView, before gradient/playBtn/hoverDarken
+            pane.getChildren().add(1, previewImageView);
+        }
+
+        previewPlayer.media().play(ThumbnailService.toLocalPath(videoUrl));
+
+        previewAutoStopThread = new Thread(() -> {
+            try { Thread.sleep(5000); } catch (InterruptedException ignored) { return; }
+            Platform.runLater(() -> { if (activePreviewPane == pane) stopPreview(pane); });
+        });
+        previewAutoStopThread.setDaemon(true);
+        previewAutoStopThread.start();
+    }
+
+    private void stopPreview(StackPane pane) {
+        if (activePreviewPane == pane) {
+            previewPlayer.controls().stop();
+            pane.getChildren().remove(previewImageView);
+            activePreviewPane = null;
         }
     }
 }
