@@ -15,6 +15,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.function.Consumer;
@@ -831,13 +832,16 @@ public class Controller implements ExerciseView {
 
         // Thumbnail: cover mode — fills width, height overflow is clipped
         ImageView thumbnailView = new ImageView();
-        thumbnailView.setFitWidth(280);
+        thumbnailView.setFitWidth(300);
         thumbnailView.setFitHeight(9999);
         thumbnailView.setPreserveRatio(true);
         thumbnailView.setSmooth(true);
         imagePlaceholder.getChildren().add(thumbnailView);
 
-        if (e.videoUrl() != null && !e.videoUrl().isBlank()) {
+        boolean videoPlayable = e.videoUrl() != null && !e.videoUrl().isBlank()
+                && new File(ThumbnailService.toLocalPath(e.videoUrl())).exists();
+
+        if (videoPlayable) {
             ThumbnailService.loadAsync(e.videoUrl(), img -> {
                 if (img != null) thumbnailView.setImage(img);
             });
@@ -852,11 +856,13 @@ public class Controller implements ExerciseView {
                 new Stop(1.0,  Color.rgb(10, 40, 30, 0.55))));
         gradient.setMouseTransparent(true);
 
-        // Play button: frosted white circle
-        Circle playCircle = new Circle(20, Color.rgb(255, 255, 255, 0.88));
-        playCircle.setEffect(new DropShadow(8, Color.rgb(0, 0, 0, 0.25)));
+        // Play button: dark green circle with white arrow and subtle ring
+        Circle playCircle = new Circle(22, Color.rgb(18, 90, 62, 0.72));
+        playCircle.setStroke(Color.rgb(255, 255, 255, 0.55));
+        playCircle.setStrokeWidth(1.5);
+        playCircle.setEffect(new DropShadow(12, Color.rgb(0, 0, 0, 0.4)));
         Label playArrow = new Label("▶");
-        playArrow.setStyle("-fx-text-fill: #1e6648; -fx-font-size: 13px; -fx-padding: 0 0 0 2;");
+        playArrow.setStyle("-fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 0 0 0 3;");
         StackPane playBtn = new StackPane(playCircle, playArrow);
         playBtn.setMouseTransparent(true);
 
@@ -870,7 +876,7 @@ public class Controller implements ExerciseView {
 
         imagePlaceholder.getChildren().addAll(gradient, playBtn, hoverDarken);
 
-        if (e.videoUrl() != null && !e.videoUrl().isBlank()) {
+        if (videoPlayable) {
             imagePlaceholder.setOnMouseEntered(ev -> {
                 playBtn.setVisible(false);
                 hoverDarken.setVisible(true);
@@ -1231,6 +1237,7 @@ public class Controller implements ExerciseView {
             pane.getChildren().add(1, previewImageView);
         }
 
+        previewImageView.setImage(null); // clear stale last frame before new video starts
         previewPlayer.media().play(ThumbnailService.toLocalPath(videoUrl));
 
         previewAutoStopThread = new Thread(() -> {

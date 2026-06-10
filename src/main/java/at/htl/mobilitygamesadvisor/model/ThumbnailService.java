@@ -58,10 +58,10 @@ public class ThumbnailService {
             } finally {
                 inProgress.remove(videoUrl);
             }
-            if (cached.exists()) {
-                Platform.runLater(() -> onDone.accept(
-                        new Image(cached.toURI().toString(), 440, 9999, true, true)));
-            }
+            Platform.runLater(() -> onDone.accept(
+                    cached.exists()
+                            ? new Image(cached.toURI().toString(), 440, 9999, true, true)
+                            : null));
         });
     }
 
