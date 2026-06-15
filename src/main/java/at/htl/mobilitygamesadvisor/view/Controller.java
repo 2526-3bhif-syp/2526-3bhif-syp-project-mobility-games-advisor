@@ -535,7 +535,7 @@ public class Controller implements ExerciseView {
         if (n == 0) {
             headerH = 185;
         } else if (n == 1) {
-            headerH = Math.round(SC_W * 9.0 / 16.0);         // ~298
+            headerH = 210;
         } else if (n == 2) {
             headerH = Math.round(halfW * 9.0 / 16.0);          // ~149
         } else {
@@ -642,6 +642,7 @@ public class Controller implements ExerciseView {
 
         Label header = new Label(s.title());
         header.getStyleClass().add("header-text");
+        header.setStyle("-fx-font-size: 34px; -fx-font-weight: bold;");
         Separator sep = new Separator();
 
         List<Exercise> exercises = sammlungRepo.getExercises(sammlungId);
