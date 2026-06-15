@@ -15,6 +15,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.function.Consumer;
@@ -22,11 +23,20 @@ import javafx.geometry.Rectangle2D;
 import javafx.geometry.Side;
 import javafx.stage.Screen;
 
-import javafx.scene.media.Media;
-import javafx.scene.media.MediaPlayer;
-import javafx.scene.media.MediaView;
+import javafx.application.Platform;
+import javafx.scene.effect.DropShadow;
+import javafx.scene.image.ImageView;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.CycleMethod;
+import javafx.scene.paint.LinearGradient;
+import javafx.scene.paint.Stop;
+import javafx.scene.shape.Circle;
+import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
-import javafx.util.Duration;
+import at.htl.mobilitygamesadvisor.model.ThumbnailService;
+import uk.co.caprica.vlcj.factory.MediaPlayerFactory;
+import uk.co.caprica.vlcj.player.embedded.EmbeddedMediaPlayer;
+import uk.co.caprica.vlcj.javafx.videosurface.ImageViewVideoSurface;
 
 /**
  * VIEW (JavaFX Controller) – purely responsible for rendering.
@@ -54,6 +64,13 @@ public class Controller implements ExerciseView {
     private final ExerciseRepository  exerciseRepo  = new ExerciseRepository();
     private final SammlungRepository  sammlungRepo  = new SammlungRepository();
     private Integer openSammlungId = null;
+
+    // —— Hover-Preview (shared single player) ————————————————————————————————
+    private MediaPlayerFactory previewFactory;
+    private EmbeddedMediaPlayer previewPlayer;
+    private ImageView previewImageView;
+    private StackPane activePreviewPane;
+    private Thread previewAutoStopThread;
 
     // —— MVP wiring ————————————————————————————————————————————————————————————
 
@@ -373,21 +390,25 @@ public class Controller implements ExerciseView {
 
         List<Sammlung> sammlungen = sammlungRepo.getAll();
 
-        javafx.scene.layout.FlowPane grid = new javafx.scene.layout.FlowPane();
-        grid.setHgap(16);
-        grid.setVgap(16);
+        VBox rows = new VBox(20);
 
         if (sammlungen.isEmpty()) {
             Label empty = new Label("Noch keine Sammelmappen vorhanden. Erstelle eine oben.");
             empty.getStyleClass().add("card-description");
-            grid.getChildren().add(empty);
+            rows.getChildren().add(empty);
         } else {
-            for (Sammlung s : sammlungen) {
-                grid.getChildren().add(buildSammlungCard(s));
+            for (int i = 0; i < sammlungen.size(); i += 2) {
+                HBox row = new HBox(20);
+                row.setAlignment(Pos.TOP_LEFT);
+                row.getChildren().add(buildSammlungCard(sammlungen.get(i)));
+                if (i + 1 < sammlungen.size()) {
+                    row.getChildren().add(buildSammlungCard(sammlungen.get(i + 1)));
+                }
+                rows.getChildren().add(row);
             }
         }
 
-        ScrollPane scroll = new ScrollPane(grid);
+        ScrollPane scroll = new ScrollPane(rows);
         scroll.setFitToWidth(true);
         scroll.getStyleClass().add("transparent-scroll");
         scroll.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
@@ -397,36 +418,15 @@ public class Controller implements ExerciseView {
     }
 
     private VBox buildSammlungCard(Sammlung s) {
-        int count = sammlungRepo.countExercises(s.id());
+        List<Exercise> allExercises = sammlungRepo.getExercises(s.id());
+        int count = allExercises.size();
 
         VBox card = new VBox(0);
         card.getStyleClass().add("exercise-card");
-        card.setPrefWidth(380);
-        card.setMaxWidth(380);
-        card.setStyle("-fx-pref-width: 380; -fx-max-width: 380;");
+        card.setPrefWidth(530);
+        card.setMaxWidth(530);
 
-        // — Header with gradient and monogram
-        StackPane cardHeader = new StackPane();
-        String chNormal = "-fx-background-color: linear-gradient(to bottom right, #c2dfd3, #eaf4f0);" +
-                "-fx-background-radius: 14 14 0 0;" +
-                "-fx-min-height: 96px; -fx-pref-height: 96px;" +
-                "-fx-border-color: #d5e9e2; -fx-border-width: 0 0 1 0;";
-        String chHover  = "-fx-background-color: linear-gradient(to bottom right, #a8d4c5, #d0eae5);" +
-                "-fx-background-radius: 14 14 0 0;" +
-                "-fx-min-height: 96px; -fx-pref-height: 96px;" +
-                "-fx-border-color: #5cad8a80; -fx-border-width: 0 0 1 0;";
-        cardHeader.setStyle(chNormal);
-        cardHeader.setPrefHeight(96);
-        card.setOnMouseEntered(ev -> cardHeader.setStyle(chHover));
-        card.setOnMouseExited(ev  -> cardHeader.setStyle(chNormal));
-
-        // Monogram: first letter of the title
-        String initial = s.title().isEmpty() ? "?" : s.title().substring(0, 1).toUpperCase();
-        Label monogram = new Label(initial);
-        monogram.setStyle(
-                "-fx-font-size: 40px; -fx-font-weight: bold;" +
-                "-fx-text-fill: rgba(45,122,92,0.28);" +
-                "-fx-font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;");
+        StackPane cardHeader = buildSammlungThumbnailHeader(allExercises);
 
         Label countBadge = new Label(count + (count == 1 ? " Übung" : " Übungen"));
         countBadge.setStyle(
@@ -436,8 +436,7 @@ public class Controller implements ExerciseView {
                 "-fx-padding: 4 10 4 10; -fx-background-radius: 20;");
         StackPane.setAlignment(countBadge, Pos.TOP_RIGHT);
         StackPane.setMargin(countBadge, new Insets(12, 12, 0, 0));
-
-        cardHeader.getChildren().addAll(monogram, countBadge);
+        cardHeader.getChildren().add(countBadge);
 
         // — Content
         VBox content = new VBox(8);
@@ -522,6 +521,102 @@ public class Controller implements ExerciseView {
         return card;
     }
 
+    // Card dimensions used for thumbnail grid layout
+    private static final double SC_W = 530;  // card width
+    private static final double SC_G = 2;    // gap between cells
+
+    private StackPane buildSammlungThumbnailHeader(List<Exercise> exercises) {
+        List<Exercise> cells = exercises.size() > 4 ? exercises.subList(0, 4) : exercises;
+        int n = cells.size();
+
+        double halfW = (SC_W - SC_G) / 2.0;
+        // Compute header height so each cell has ~16:9 aspect ratio
+        double headerH;
+        if (n == 0) {
+            headerH = 185;
+        } else if (n == 1) {
+            headerH = 210;
+        } else if (n == 2) {
+            headerH = Math.round(halfW * 9.0 / 16.0);          // ~149
+        } else {
+            headerH = Math.round(2 * halfW * 9.0 / 16.0 + SC_G); // ~300
+        }
+        double halfH = (headerH - SC_G) / 2.0;
+
+        StackPane header = new StackPane();
+        header.setMinSize(SC_W, headerH);
+        header.setPrefSize(SC_W, headerH);
+        header.setMaxSize(SC_W, headerH);
+        header.setStyle(
+                "-fx-background-color: linear-gradient(to bottom right, #c2dfd3, #eaf4f0);" +
+                "-fx-background-radius: 14 14 0 0;" +
+                "-fx-border-color: #d5e9e2; -fx-border-width: 0 0 1 0;");
+
+        // Clip: round top corners only (bottom extends beyond header so corners stay sharp)
+        Rectangle clip = new Rectangle(SC_W, headerH + 20);
+        clip.setArcWidth(14);
+        clip.setArcHeight(14);
+        header.setClip(clip);
+
+        if (cells.isEmpty()) return header;
+
+        javafx.scene.Node content;
+        if (n == 1) {
+            content = buildSammlungThumbCell(cells.get(0), SC_W, headerH);
+        } else if (n == 2) {
+            content = new HBox(SC_G,
+                    buildSammlungThumbCell(cells.get(0), halfW, headerH),
+                    buildSammlungThumbCell(cells.get(1), halfW, headerH));
+        } else if (n == 3) {
+            VBox rightCol = new VBox(SC_G,
+                    buildSammlungThumbCell(cells.get(1), halfW, halfH),
+                    buildSammlungThumbCell(cells.get(2), halfW, halfH));
+            content = new HBox(SC_G, buildSammlungThumbCell(cells.get(0), halfW, headerH), rightCol);
+        } else {
+            HBox row0 = new HBox(SC_G,
+                    buildSammlungThumbCell(cells.get(0), halfW, halfH),
+                    buildSammlungThumbCell(cells.get(1), halfW, halfH));
+            HBox row1 = new HBox(SC_G,
+                    buildSammlungThumbCell(cells.get(2), halfW, halfH),
+                    buildSammlungThumbCell(cells.get(3), halfW, halfH));
+            content = new VBox(SC_G, row0, row1);
+        }
+
+        StackPane.setAlignment(content, Pos.TOP_LEFT);
+        header.getChildren().add(content);
+        return header;
+    }
+
+    private StackPane buildSammlungThumbCell(Exercise e, double w, double h) {
+        StackPane cell = new StackPane();
+        cell.setMinSize(w, h);
+        cell.setPrefSize(w, h);
+        cell.setMaxSize(w, h);
+        cell.setStyle("-fx-background-color: linear-gradient(to bottom right, #2d7a5c, #5cad8a);");
+
+        Rectangle cellClip = new Rectangle(w, h);
+        cell.setClip(cellClip);
+
+        String url = e.videoUrl();
+        if (url != null && !url.isBlank()) {
+            ImageView iv = new ImageView();
+            iv.setSmooth(true);
+            iv.setPreserveRatio(true);
+            cell.getChildren().add(iv);
+            ThumbnailService.loadAsync(url, img -> {
+                if (img == null) return;
+                double scaleW = w / img.getWidth();
+                double scaleH = h / img.getHeight();
+                double scale  = Math.max(scaleW, scaleH);
+                iv.setFitWidth(img.getWidth()  * scale);
+                iv.setFitHeight(img.getHeight() * scale);
+                iv.setImage(img);
+            });
+        }
+
+        return cell;
+    }
+
     private void buildSammlungDetailPane(int sammlungId) {
         List<Sammlung> all = sammlungRepo.getAll();
         Sammlung s = all.stream().filter(x -> x.id() == sammlungId).findFirst().orElse(null);
@@ -547,6 +642,7 @@ public class Controller implements ExerciseView {
 
         Label header = new Label(s.title());
         header.getStyleClass().add("header-text");
+        header.setStyle("-fx-font-size: 34px; -fx-font-weight: bold;");
         Separator sep = new Separator();
 
         List<Exercise> exercises = sammlungRepo.getExercises(sammlungId);
@@ -561,32 +657,136 @@ public class Controller implements ExerciseView {
             return;
         }
 
-        Label countLabel = new Label(exercises.size() + " Übung" + (exercises.size() == 1 ? "" : "en"));
-        countLabel.getStyleClass().add("card-description");
-
-        Button clearBtn = buildDeleteBtn("🗑 Sammelmappe leeren");
-        clearBtn.setOnAction(ev -> {
-            for (Exercise e : exercises) sammlungRepo.removeExercise(sammlungId, e.id());
-            buildCollectionPane();
-            applyFilter(); // NEU: statt showExercises direkt
-        });
-
-        HBox topRow = new HBox(12, countLabel, clearBtn);
-        topRow.setAlignment(Pos.CENTER_LEFT);
-
-        VBox list = new VBox(8);
-        list.setMaxWidth(Double.MAX_VALUE);
+        javafx.scene.layout.FlowPane grid = new javafx.scene.layout.FlowPane();
+        grid.setHgap(16);
+        grid.setVgap(16);
         for (int i = 0; i < exercises.size(); i++) {
-            list.getChildren().add(buildCollectionCard(exercises.get(i), sammlungId, exercises, i));
+            grid.getChildren().add(buildSammlungExerciseCard(exercises.get(i), sammlungId, exercises, i));
         }
 
-        ScrollPane scroll = new ScrollPane(list);
+        ScrollPane scroll = new ScrollPane(grid);
         scroll.setFitToWidth(true);
         scroll.getStyleClass().add("transparent-scroll");
         scroll.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
         VBox.setVgrow(scroll, Priority.ALWAYS);
 
-        paneCollection.getChildren().addAll(backBtn, header, sep, topRow, scroll);
+        paneCollection.getChildren().addAll(backBtn, header, sep, scroll);
+    }
+
+    private VBox buildSammlungExerciseCard(Exercise e, int sammlungId, List<Exercise> allExercises, int index) {
+        VBox card = new VBox();
+        card.getStyleClass().add("exercise-card");
+
+        StackPane imagePlaceholder = new StackPane();
+        imagePlaceholder.getStyleClass().add("card-image-placeholder");
+        imagePlaceholder.setPrefHeight(165);
+
+        Rectangle cardClip = new Rectangle();
+        cardClip.setArcWidth(14);
+        cardClip.setArcHeight(14);
+        cardClip.widthProperty().bind(imagePlaceholder.widthProperty());
+        cardClip.heightProperty().bind(imagePlaceholder.heightProperty());
+        imagePlaceholder.setClip(cardClip);
+
+        ImageView thumbnailView = new ImageView();
+        thumbnailView.setFitWidth(300);
+        thumbnailView.setFitHeight(9999);
+        thumbnailView.setPreserveRatio(true);
+        thumbnailView.setSmooth(true);
+        imagePlaceholder.getChildren().add(thumbnailView);
+
+        boolean videoPlayable = e.videoUrl() != null && !e.videoUrl().isBlank()
+                && new File(ThumbnailService.toLocalPath(e.videoUrl())).exists();
+
+        if (videoPlayable) {
+            ThumbnailService.loadAsync(e.videoUrl(), img -> {
+                if (img != null) thumbnailView.setImage(img);
+            });
+        }
+
+        Rectangle gradient = new Rectangle();
+        gradient.widthProperty().bind(imagePlaceholder.widthProperty());
+        gradient.heightProperty().bind(imagePlaceholder.heightProperty());
+        gradient.setFill(new LinearGradient(0, 0, 0, 1, true, CycleMethod.NO_CYCLE,
+                new Stop(0.35, Color.TRANSPARENT),
+                new Stop(1.0,  Color.rgb(10, 40, 30, 0.55))));
+        gradient.setMouseTransparent(true);
+
+        Label numBadge = new Label(String.valueOf(index + 1));
+        numBadge.setStyle(
+                "-fx-background-color: rgba(0,0,0,0.45);-fx-text-fill: white;" +
+                "-fx-font-size: 11px;-fx-font-weight: bold;" +
+                "-fx-padding: 3 8 3 8;-fx-background-radius: 8;");
+        StackPane.setAlignment(numBadge, Pos.TOP_LEFT);
+        StackPane.setMargin(numBadge, new Insets(9, 0, 0, 9));
+
+        Circle playCircle = new Circle(22, Color.rgb(18, 90, 62, 0.72));
+        playCircle.setStroke(Color.rgb(255, 255, 255, 0.55));
+        playCircle.setStrokeWidth(1.5);
+        playCircle.setEffect(new DropShadow(12, Color.rgb(0, 0, 0, 0.4)));
+        Label playArrow = new Label("▶");
+        playArrow.setStyle("-fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 0 0 0 3;");
+        StackPane playBtn = new StackPane(playCircle, playArrow);
+        playBtn.setMouseTransparent(true);
+
+        Rectangle hoverDarken = new Rectangle();
+        hoverDarken.widthProperty().bind(imagePlaceholder.widthProperty());
+        hoverDarken.heightProperty().bind(imagePlaceholder.heightProperty());
+        hoverDarken.setFill(Color.rgb(0, 0, 0, 0.18));
+        hoverDarken.setMouseTransparent(true);
+        hoverDarken.setVisible(false);
+
+        imagePlaceholder.getChildren().addAll(gradient, numBadge, playBtn, hoverDarken);
+
+        if (videoPlayable) {
+            imagePlaceholder.setOnMouseEntered(ev -> {
+                playBtn.setVisible(false);
+                hoverDarken.setVisible(true);
+                startPreview(imagePlaceholder, e.videoUrl());
+            });
+            imagePlaceholder.setOnMouseExited(ev -> {
+                playBtn.setVisible(true);
+                hoverDarken.setVisible(false);
+                stopPreview(imagePlaceholder);
+            });
+        }
+        imagePlaceholder.setOnMouseClicked(ev ->
+                openDetailInPane(e, paneCollection, btnCollection, allExercises, index));
+
+        VBox content = new VBox(8);
+        content.setOnMouseClicked(ev ->
+                openDetailInPane(e, paneCollection, btnCollection, allExercises, index));
+        content.getStyleClass().add("card-content");
+
+        Label titleLabel = new Label(e.title());
+        titleLabel.getStyleClass().add("card-title");
+
+        Label descLabel = new Label(e.desc() != null ? e.desc() : "");
+        descLabel.getStyleClass().add("card-description");
+        descLabel.setWrapText(true);
+
+        Label tagLabel = new Label(e.category() != null ? e.category() : "Unkategorisiert");
+        tagLabel.getStyleClass().add("card-tag");
+
+        String rmNormal = "-fx-background-color: transparent;-fx-text-fill: #c0392b;" +
+                "-fx-font-size: 11px;-fx-cursor: hand;-fx-padding: 4 8 4 8;" +
+                "-fx-border-color: #c0392b;-fx-border-radius: 6px;-fx-border-width: 1;";
+        String rmHover  = "-fx-background-color: #c0392b18;-fx-text-fill: #c0392b;" +
+                "-fx-font-size: 11px;-fx-cursor: hand;-fx-padding: 4 8 4 8;" +
+                "-fx-border-color: #c0392b;-fx-border-radius: 6px;-fx-border-width: 1;";
+        Button removeBtn = new Button("✖ Entfernen");
+        removeBtn.setStyle(rmNormal);
+        removeBtn.setOnMouseEntered(ev -> removeBtn.setStyle(rmHover));
+        removeBtn.setOnMouseExited(ev  -> removeBtn.setStyle(rmNormal));
+        removeBtn.setOnAction(ev -> {
+            sammlungRepo.removeExercise(sammlungId, e.id());
+            buildCollectionPane();
+            applyFilter();
+        });
+
+        content.getChildren().addAll(titleLabel, descLabel, tagLabel, removeBtn);
+        card.getChildren().addAll(imagePlaceholder, content);
+        return card;
     }
 
     private HBox buildCollectionCard(Exercise e, int sammlungId, List<Exercise> allExercises, int index) {
@@ -597,13 +797,7 @@ public class Controller implements ExerciseView {
                 "-fx-background-radius: 10;-fx-border-color: #5cad8a60;" +
                 "-fx-border-radius: 10;-fx-border-width: 1;-fx-cursor: hand;";
 
-        HBox row = new HBox(0);
-        row.setStyle(rowNormal);
-        row.setMaxWidth(Double.MAX_VALUE);
-        row.setOnMouseEntered(ev -> row.setStyle(rowHover));
-        row.setOnMouseExited(ev  -> row.setStyle(rowNormal));
-
-        // — Thumbnail with number badge (top-left)
+        // — Thumbnail area (declared before row so row.setOnMouseExited can reference it)
         StackPane thumb = new StackPane();
         thumb.setPrefSize(120, 80);
         thumb.setMinSize(120, 80);
@@ -611,6 +805,45 @@ public class Controller implements ExerciseView {
         thumb.setStyle(
                 "-fx-background-color: linear-gradient(to bottom right, #2d7a5c, #5cad8a);" +
                 "-fx-background-radius: 10 0 0 10;");
+
+        Rectangle thumbClip = new Rectangle();
+        thumbClip.widthProperty().bind(thumb.widthProperty());
+        thumbClip.heightProperty().bind(thumb.heightProperty());
+        thumbClip.setArcWidth(10);
+        thumbClip.setArcHeight(10);
+        thumb.setClip(thumbClip);
+
+        HBox row = new HBox(0);
+        row.setStyle(rowNormal);
+        row.setMaxWidth(Double.MAX_VALUE);
+        row.setOnMouseEntered(ev -> row.setStyle(rowHover));
+        row.setOnMouseExited(ev -> {
+            row.setStyle(rowNormal);
+            stopPreview(thumb);
+        });
+
+        ImageView thumbnailView = new ImageView();
+        thumbnailView.setFitWidth(120);
+        thumbnailView.setFitHeight(80);
+        thumbnailView.setPreserveRatio(true);
+        thumbnailView.setSmooth(true);
+
+        boolean videoPlayable = e.videoUrl() != null && !e.videoUrl().isBlank()
+                && new File(ThumbnailService.toLocalPath(e.videoUrl())).exists();
+
+        if (videoPlayable) {
+            ThumbnailService.loadAsync(e.videoUrl(), img -> {
+                if (img != null) thumbnailView.setImage(img);
+            });
+        }
+
+        Rectangle gradient = new Rectangle();
+        gradient.widthProperty().bind(thumb.widthProperty());
+        gradient.heightProperty().bind(thumb.heightProperty());
+        gradient.setFill(new LinearGradient(0, 0, 0, 1, true, CycleMethod.NO_CYCLE,
+                new Stop(0.4, Color.TRANSPARENT),
+                new Stop(1.0, Color.rgb(10, 40, 30, 0.45))));
+        gradient.setMouseTransparent(true);
 
         Label playIcon = new Label("▶");
         playIcon.setStyle("-fx-text-fill: rgba(255,255,255,0.75); -fx-font-size: 22px;");
@@ -623,7 +856,27 @@ public class Controller implements ExerciseView {
         StackPane.setAlignment(numBadge, Pos.TOP_LEFT);
         StackPane.setMargin(numBadge, new Insets(7, 0, 0, 7));
 
-        thumb.getChildren().addAll(playIcon, numBadge);
+        Rectangle hoverDarken = new Rectangle();
+        hoverDarken.widthProperty().bind(thumb.widthProperty());
+        hoverDarken.heightProperty().bind(thumb.heightProperty());
+        hoverDarken.setFill(Color.rgb(0, 0, 0, 0.18));
+        hoverDarken.setMouseTransparent(true);
+        hoverDarken.setVisible(false);
+
+        thumb.getChildren().addAll(thumbnailView, gradient, playIcon, numBadge, hoverDarken);
+
+        if (videoPlayable) {
+            thumb.setOnMouseEntered(ev -> {
+                playIcon.setVisible(false);
+                hoverDarken.setVisible(true);
+                startPreview(thumb, e.videoUrl());
+            });
+            thumb.setOnMouseExited(ev -> {
+                playIcon.setVisible(true);
+                hoverDarken.setVisible(false);
+                stopPreview(thumb);
+            });
+        }
 
         // — Info section
         VBox info = new VBox(4);
@@ -733,6 +986,10 @@ public class Controller implements ExerciseView {
     @Override
     public void showExercises(List<Exercise> exercises) {
         if (exerciseGrid == null) return;
+        if (previewPlayer != null) {
+            previewPlayer.controls().stop();
+            activePreviewPane = null;
+        }
         exerciseGrid.getChildren().clear();
         exercises.forEach(this::addExerciseCard);
     }
@@ -799,43 +1056,74 @@ public class Controller implements ExerciseView {
 
         StackPane imagePlaceholder = new StackPane();
         imagePlaceholder.getStyleClass().add("card-image-placeholder");
-        imagePlaceholder.setPrefHeight(120);
+        imagePlaceholder.setPrefHeight(165);
 
-        if (e.videoUrl() != null && !e.videoUrl().isBlank()) {
-            try {
-                Media media = new Media(e.videoUrl());
-                MediaPlayer player = new MediaPlayer(media);
+        // Clip to rounded top corners so thumbnail/video fills edge-to-edge
+        Rectangle cardClip = new Rectangle();
+        cardClip.setArcWidth(14);
+        cardClip.setArcHeight(14);
+        cardClip.widthProperty().bind(imagePlaceholder.widthProperty());
+        cardClip.heightProperty().bind(imagePlaceholder.heightProperty());
+        imagePlaceholder.setClip(cardClip);
 
-                MediaView thumbnail = new MediaView(player);
-                thumbnail.setFitWidth(220);
-                thumbnail.setFitHeight(120);
-                thumbnail.setPreserveRatio(false);
+        // Thumbnail: cover mode — fills width, height overflow is clipped
+        ImageView thumbnailView = new ImageView();
+        thumbnailView.setFitWidth(300);
+        thumbnailView.setFitHeight(9999);
+        thumbnailView.setPreserveRatio(true);
+        thumbnailView.setSmooth(true);
+        imagePlaceholder.getChildren().add(thumbnailView);
 
-                Label playIcon = new Label("▶");
-                playIcon.setStyle(
-                        "-fx-text-fill: white; -fx-font-size: 28px;" +
-                                "-fx-effect: dropshadow(gaussian, black, 8, 0, 0, 0);"
-                );
+        boolean videoPlayable = e.videoUrl() != null && !e.videoUrl().isBlank()
+                && new File(ThumbnailService.toLocalPath(e.videoUrl())).exists();
 
-                // Wait until media is ready, THEN seek to first frame
-                player.setOnReady(() -> {
-                    player.seek(Duration.ZERO);
-                    player.pause();
-                });
-
-                imagePlaceholder.getChildren().addAll(thumbnail, playIcon);
-            } catch (Exception ex) {
-                imagePlaceholder.getChildren().add(new Label("▶ VIDEO"));
-            }
+        if (videoPlayable) {
+            ThumbnailService.loadAsync(e.videoUrl(), img -> {
+                if (img != null) thumbnailView.setImage(img);
+            });
         }
 
-        javafx.scene.layout.Region hoverOverlay = new javafx.scene.layout.Region();
-        hoverOverlay.setStyle("-fx-background-color: rgba(0,0,0,0.10); -fx-background-radius: 14 14 0 0;");
-        hoverOverlay.setMouseTransparent(true);
-        hoverOverlay.setVisible(false);
-        imagePlaceholder.getChildren().add(hoverOverlay);
-        imagePlaceholder.setOnMouseEntered(ev -> hoverOverlay.setVisible(true));
-        imagePlaceholder.setOnMouseExited(ev -> hoverOverlay.setVisible(false));
+        // Gradient overlay: transparent → dark at bottom
+        Rectangle gradient = new Rectangle();
+        gradient.widthProperty().bind(imagePlaceholder.widthProperty());
+        gradient.heightProperty().bind(imagePlaceholder.heightProperty());
+        gradient.setFill(new LinearGradient(0, 0, 0, 1, true, CycleMethod.NO_CYCLE,
+                new Stop(0.35, Color.TRANSPARENT),
+                new Stop(1.0,  Color.rgb(10, 40, 30, 0.55))));
+        gradient.setMouseTransparent(true);
+
+        // Play button: dark green circle with white arrow and subtle ring
+        Circle playCircle = new Circle(22, Color.rgb(18, 90, 62, 0.72));
+        playCircle.setStroke(Color.rgb(255, 255, 255, 0.55));
+        playCircle.setStrokeWidth(1.5);
+        playCircle.setEffect(new DropShadow(12, Color.rgb(0, 0, 0, 0.4)));
+        Label playArrow = new Label("▶");
+        playArrow.setStyle("-fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 0 0 0 3;");
+        StackPane playBtn = new StackPane(playCircle, playArrow);
+        playBtn.setMouseTransparent(true);
+
+        // Hover darkening (replaces old hoverOverlay)
+        Rectangle hoverDarken = new Rectangle();
+        hoverDarken.widthProperty().bind(imagePlaceholder.widthProperty());
+        hoverDarken.heightProperty().bind(imagePlaceholder.heightProperty());
+        hoverDarken.setFill(Color.rgb(0, 0, 0, 0.18));
+        hoverDarken.setMouseTransparent(true);
+        hoverDarken.setVisible(false);
+
+        imagePlaceholder.getChildren().addAll(gradient, playBtn, hoverDarken);
+
+        if (videoPlayable) {
+            imagePlaceholder.setOnMouseEntered(ev -> {
+                playBtn.setVisible(false);
+                hoverDarken.setVisible(true);
+                startPreview(imagePlaceholder, e.videoUrl());
+            });
+            imagePlaceholder.setOnMouseExited(ev -> {
+                playBtn.setVisible(true);
+                hoverDarken.setVisible(false);
+                stopPreview(imagePlaceholder);
+            });
+        }
         imagePlaceholder.setOnMouseClicked(event -> openDetailInPane(e, paneExercises, btnExercises));
         VBox content = new VBox(8);
         content.setOnMouseClicked(event -> openDetailInPane(e, paneExercises, btnExercises));
@@ -1148,6 +1436,59 @@ public class Controller implements ExerciseView {
         if (currentPlayer != null) {
             currentPlayer.dispose();
             currentPlayer = null;
+        }
+    }
+
+    // —— Hover-Preview ————————————————————————————————————————————————————————
+
+    private void initPreviewPlayer() {
+        if (previewFactory != null) return;
+        previewFactory = new MediaPlayerFactory(
+                "--no-audio", "--avcodec-hw=none", "--demux=avformat", "--avcodec-threads=1");
+        previewPlayer = previewFactory.mediaPlayers().newEmbeddedMediaPlayer();
+        previewImageView = new ImageView();
+        previewImageView.setFitWidth(280);
+        previewImageView.setFitHeight(9999);
+        previewImageView.setPreserveRatio(true);
+        previewImageView.setSmooth(true);
+        previewPlayer.videoSurface().set(new ImageViewVideoSurface(previewImageView));
+    }
+
+    private void startPreview(StackPane pane, String videoUrl) {
+        initPreviewPlayer();
+
+        if (previewAutoStopThread != null) previewAutoStopThread.interrupt();
+
+        if (activePreviewPane != null && activePreviewPane != pane) {
+            previewPlayer.controls().stop();
+            activePreviewPane.getChildren().remove(previewImageView);
+        }
+
+        activePreviewPane = pane;
+        previewImageView.setFitWidth(pane.getWidth() > 0 ? pane.getWidth() : 220);
+        previewImageView.setFitHeight(pane.getHeight() > 0 ? pane.getHeight() : 120);
+
+        if (!pane.getChildren().contains(previewImageView)) {
+            // Insert at index 1: after thumbnailView, before gradient/playBtn/hoverDarken
+            pane.getChildren().add(1, previewImageView);
+        }
+
+        previewImageView.setImage(null); // clear stale last frame before new video starts
+        previewPlayer.media().play(ThumbnailService.toLocalPath(videoUrl));
+
+        previewAutoStopThread = new Thread(() -> {
+            try { Thread.sleep(5000); } catch (InterruptedException ignored) { return; }
+            Platform.runLater(() -> { if (activePreviewPane == pane) stopPreview(pane); });
+        });
+        previewAutoStopThread.setDaemon(true);
+        previewAutoStopThread.start();
+    }
+
+    private void stopPreview(StackPane pane) {
+        if (activePreviewPane == pane) {
+            previewPlayer.controls().stop();
+            pane.getChildren().remove(previewImageView);
+            activePreviewPane = null;
         }
     }
 }

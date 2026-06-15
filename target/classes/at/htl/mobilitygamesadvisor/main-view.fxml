@@ -38,7 +38,7 @@
 
         <!-- PAGE: Exercises -->
         <VBox fx:id="paneExercises" spacing="20" visible="false">
-            <padding><Insets top="30" right="40" bottom="30" left="40"/></padding>
+            <padding><Insets top="30" right="15" bottom="30" left="40"/></padding>
             <HBox alignment="CENTER_LEFT" spacing="20">
                 <VBox>
                     <Label text="Übungsübersicht" styleClass="header-text" />

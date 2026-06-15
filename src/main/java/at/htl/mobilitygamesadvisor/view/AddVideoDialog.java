@@ -2,6 +2,7 @@
 package at.htl.mobilitygamesadvisor.view;
 
 import at.htl.mobilitygamesadvisor.model.ExerciseRepository;
+import at.htl.mobilitygamesadvisor.model.ThumbnailService;
 import at.htl.mobilitygamesadvisor.model.VideoUploadService;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -275,11 +276,17 @@ public class AddVideoDialog {
                 // 2. store the HTTP URL, not a file path
                 String videoUrl = "http://localhost:8081/videos/" +
                         URLEncoder.encode(selectedFile[0].getName(), StandardCharsets.UTF_8)
-                                .replace("+", "%20"); // encode spaces as %20 not +
+                                .replace("+", "%20");
 
-                repo.insert(title, desc, category, videoUrl);
-                onVideoAdded.run();
-                rootPane.getChildren().remove(overlayWrapper);
+                // 3. generate thumbnail first so the card shows it immediately
+                saveBtn.setText("Wird verarbeitet...");
+                saveBtn.setDisable(true);
+                cancelBtn.setDisable(true);
+                ThumbnailService.loadAsync(videoUrl, img -> {
+                    repo.insert(title, desc, category, videoUrl);
+                    onVideoAdded.run();
+                    rootPane.getChildren().remove(overlayWrapper);
+                });
             }
         });
         Region spacer = new Region();
